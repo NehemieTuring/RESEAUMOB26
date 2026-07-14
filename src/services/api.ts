@@ -64,44 +64,47 @@ class ApiClient {
             fetchConfig.body = isFormData ? config.body : JSON.stringify(config.body);
         }
 
-        console.log(`[API] ${config.method} ${url}`, isFormData ? '[FormData]' : (config.body ? JSON.stringify(config.body) : ''));
+        console.log(`[API MOCK] Intercepted ${config.method} ${url}`, isFormData ? '[FormData]' : (config.body ? JSON.stringify(config.body) : ''));
 
-        try {
-            const response = await fetch(url, fetchConfig);
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error(`[API Error] ${response.status}:`, errorData);
-
-                // Show user-friendly error notification
-                if (!config.silent) {
-                    const errorMessage = errorData.message || `Erreur ${response.status}: ${response.statusText}`;
-                    showGlobalToast(errorMessage, 'error');
+        // Short-circuit API calls and return mock data to prevent backend queries
+        return new Promise<T>((resolve) => {
+            setTimeout(() => {
+                if (config.method === 'GET') {
+                    // Try to guess the expected return type based on endpoint name
+                    if (
+                        endpoint.includes('all') || 
+                        endpoint.includes('list') || 
+                        endpoint.includes('recent') ||
+                        endpoint.includes('vehicles') ||
+                        endpoint.includes('fleets') ||
+                        endpoint.includes('drivers') ||
+                        endpoint.includes('managers') ||
+                        endpoint.includes('incidents') ||
+                        endpoint.includes('notifications')
+                    ) {
+                        if (!endpoint.includes('/count') && !endpoint.includes('unread')) {
+                            return resolve([] as unknown as T);
+                        }
+                    }
+                    if (endpoint.includes('count') || endpoint.includes('unread')) {
+                        return resolve(0 as unknown as T);
+                    }
+                    return resolve({} as unknown as T);
+                } else if (endpoint.includes('login')) {
+                    return resolve({ 
+                        success: true, 
+                        userId: 1, 
+                        email: 'test@example.com', 
+                        fullName: 'Test User', 
+                        role: 'SUPER_ADMIN',
+                        userType: 'ADMIN',
+                        organizationId: 1
+                    } as unknown as T);
+                } else {
+                    return resolve({ success: true, message: 'Action mockée avec succès' } as unknown as T);
                 }
-
-                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            // Handle empty responses (204 No Content)
-            if (response.status === 204) {
-                return {} as T;
-            }
-
-            const data = await response.json();
-            console.log(`[API Response]`, data);
-            return data;
-        } catch (error: any) {
-            // Check if it's a network error (backend not reachable)
-            if (error.message === 'Network request failed' || error.name === 'TypeError') {
-                console.error('[API Error] Serveur inaccessible:', error);
-                if (!config.silent) {
-                    showGlobalToast('🔌 Serveur inaccessible. Vérifiez votre connexion ou le backend.', 'error', 5000);
-                }
-            } else {
-                console.error('[API Error]', error);
-            }
-            throw error;
-        }
+            }, 100); // Simulate network delay
+        });
     }
 
     async get<T>(endpoint: string): Promise<T> {

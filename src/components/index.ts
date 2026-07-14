@@ -23,6 +23,7 @@ export { DataDetailsModal } from './DataDetailsModal';
 export { BackendOfflineBanner } from './BackendOfflineBanner';
 export { ResponsiveDataCard } from './ResponsiveDataCard';
 export { ResponsivePageHeader } from './ResponsivePageHeader';
+export { OrganizationFormModal } from './OrganizationFormModal';
 export { default as FleetMap } from './FleetMap';
 export type { VehicleMarker, GeofenceShape } from './FleetMap';
 export type { CardField, CardAction } from './ResponsiveDataCard';

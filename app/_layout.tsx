@@ -106,6 +106,12 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="(driver)"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="profile"
             options={{
               headerShown: false,

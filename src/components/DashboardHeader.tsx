@@ -26,7 +26,6 @@ import { changeLanguage, AVAILABLE_LANGUAGES } from '../i18n';
 import { adminApi, organizationApi } from '../services/authApi';
 import { notificationApi } from '../services/notificationApi';
 import authService from '../services/auth';
-import { OrganizationFormModal } from './OrganizationFormModal';
 
 interface DashboardHeaderProps {
     searchQuery?: string;
@@ -54,14 +53,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     const { colors, isDarkMode, toggleTheme, notificationsEnabled } = useTheme();
     const [showLanguageModal, setShowLanguageModal] = useState(false);
     const currentLanguage = i18n.language || 'fr';
-    const [organizationEmoji, setOrganizationEmoji] = useState<string | null>(null);
-    const [organizationLogo, setOrganizationLogo] = useState<string | null>(null);
-    const [organizationName, setOrganizationName] = useState<string | null>(null);
-    const [orgId, setOrgId] = useState<number | null>(null);
-    const [orgData, setOrgData] = useState<any>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [showOrgModal, setShowOrgModal] = useState(false);
+    const [userPhoto, setUserPhoto] = useState<string | null>(null);
+    const [userInitials, setUserInitials] = useState<string>('U');
     const [unreadCount, setUnreadCount] = useState(notificationCount);
+    const [userRole, setUserRole] = useState<string | null>(null);
 
     useEffect(() => {
         setUnreadCount(notificationCount);
@@ -75,76 +70,20 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 const userObj = userStr ? JSON.parse(userStr) : null;
                 const organizationId = userObj?.organizationId;
                 const adminId = userObj?.adminId || userObj?.userId;
-
-                console.log('[DashboardHeader] User data:', { organizationId, adminId, userObj });
-
-                // 1. Fetch Organization Info - try multiple methods
-                let org = null;
-
-                // Method 1: Direct organizationId
-                if (organizationId) {
-                    try {
-                        org = await organizationApi.getById(organizationId);
-                        console.log('[DashboardHeader] Got org by organizationId:', org);
-                    } catch (e) {
-                        console.log('[DashboardHeader] Failed to get org by organizationId:', e);
-                    }
+                const role = userObj?.role || userObj?.userType;
+                setUserRole(role);
+                
+                if (userObj?.fullName) {
+                    const names = userObj.fullName.split(' ');
+                    setUserInitials(names.map((n: string) => n[0]).join('').substring(0, 2).toUpperCase());
+                } else if (userObj?.adminFirstName || userObj?.adminLastName) {
+                    const first = userObj.adminFirstName ? userObj.adminFirstName[0] : '';
+                    const last = userObj.adminLastName ? userObj.adminLastName[0] : '';
+                    setUserInitials((first + last).toUpperCase() || 'U');
                 }
+                setUserPhoto(userObj?.profilePhotoUrl || null);
 
-                // Method 2: Get organization via admin endpoint
-                if (!org && adminId) {
-                    try {
-                        const orgResult = await adminApi.getOrganization(adminId);
-                        // Check if we got a real organization (not empty object from 204)
-                        if (orgResult && orgResult.organizationId) {
-                            org = orgResult;
-                            console.log('[DashboardHeader] Got org by adminId:', org);
-                        } else {
-                            console.log('[DashboardHeader] Admin has no linked organization (Method 2)');
-                        }
-                    } catch (e) {
-                        console.log('[DashboardHeader] Failed to get org by adminId:', e);
-                    }
-                }
-
-                // Method 3: Try authService user
-                if (!org) {
-                    const user = authService.getUser();
-                    if (user && user.userId) {
-                        try {
-                            const orgResult = await adminApi.getOrganization(user.userId);
-                            if (orgResult && orgResult.organizationId) {
-                                org = orgResult;
-                                console.log('[DashboardHeader] Got org by authService userId:', org);
-                            }
-                        } catch (e) {
-                            console.log('[DashboardHeader] Failed to get org by authService userId:', e);
-                        }
-                    }
-                }
-
-                // Method 4: Fallback - try to get first organization
-                if (!org) {
-                    try {
-                        const orgs = await organizationApi.getAll();
-                        if (orgs && orgs.length > 0) {
-                            org = orgs[0];
-                            console.log('[DashboardHeader] Got first available org (Fallback):', org);
-                        }
-                    } catch (e) {
-                        console.log('[DashboardHeader] Failed to get fallback org:', e);
-                    }
-                }
-
-                if (org && org.organizationId) {
-                    setOrganizationLogo(org.organizationLogo || (org as any).logoUrl);
-                    setOrganizationName(org.organizationName);
-                    setOrgId(org.organizationId);
-                    setOrgData(org);
-                    console.log('[DashboardHeader] Organization set:', org.organizationId, org.organizationName);
-                } else {
-                    console.log('[DashboardHeader] No valid organization found after all methods');
-                }
+                // We no longer fetch org data for the header avatar since we show user profile
 
                 // 2. Fetch Notification Count if enabled
                 if (notificationsEnabled) {
@@ -185,27 +124,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         setShowLanguageModal(false);
     };
 
-    const handleLogoPress = () => {
-        if (!orgId) {
-            Alert.alert(
-                "Organisation non disponible",
-                "L'identificateur de l'organisation n'a pas pu être récupéré. Veuillez vous reconnecter.",
-                [{ text: "OK" }]
-            );
-            return;
+    const handleProfilePress = () => {
+        if (userRole === 'DRIVER') {
+            router.push('/(driver)/profile' as any);
+        } else {
+            router.push('/profile' as any);
         }
-        setShowOrgModal(true);
-    };
-
-    const handleOrgUpdateSuccess = (updatedOrg: any) => {
-        const newLogoUrl = updatedOrg.logoUrl || updatedOrg.organizationLogo;
-        const newName = updatedOrg.organizationName;
-
-        if (newLogoUrl) setOrganizationLogo(newLogoUrl);
-        if (newName) setOrganizationName(newName);
-        setOrgData(updatedOrg);
-
-        setShowOrgModal(false);
     };
 
     return (
@@ -278,21 +202,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     </TouchableOpacity>
                 )}
 
-                {/* Organization Logo */}
+                {/* User Profile Avatar */}
                 <TouchableOpacity
-                    style={[styles.orgContainer, { borderColor: colors.textSecondary + '40', backgroundColor: colors.surfaceGlass }]}
-                    onPress={handleLogoPress}
-                    disabled={isUploading}
+                    style={[styles.orgContainer, { borderColor: colors.primaryBlue, backgroundColor: colors.surfaceGlass }]}
+                    onPress={handleProfilePress}
                 >
-                    {isUploading ? (
-                        <View style={styles.loadingOverlay}>
-                            <Text style={[styles.loadingLogoText, { color: colors.primaryBlue }]}>...</Text>
-                        </View>
-                    ) : organizationLogo ? (
-                        <Image source={{ uri: organizationLogo }} style={styles.orgLogo} />
+                    {userPhoto ? (
+                        <Image source={{ uri: userPhoto }} style={styles.orgLogo} />
                     ) : (
-                        <Text style={[styles.orgPlaceholderText, { color: colors.textSecondary }]}>
-                            Org
+                        <Text style={[styles.orgPlaceholderText, { color: colors.primaryBlue }]}>
+                            {userInitials}
                         </Text>
                     )}
                 </TouchableOpacity>
@@ -332,22 +251,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 </Pressable>
             </Modal>
 
-            {/* Organization Form Modal */}
-            {orgId && (
-                <OrganizationFormModal
-                    visible={showOrgModal}
-                    orgId={orgId}
-                    initialData={{
-                        name: organizationName || '',
-                        logo: organizationLogo,
-                        phone: orgData?.organizationPhone,
-                        address: orgData?.organizationAddress,
-                        city: orgData?.organizationCity,
-                    }}
-                    onClose={() => setShowOrgModal(false)}
-                    onSuccess={handleOrgUpdateSuccess}
-                />
-            )}
         </View>
     );
 };
@@ -477,7 +380,7 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     orgPlaceholderText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '800',
     },
     loadingOverlay: {

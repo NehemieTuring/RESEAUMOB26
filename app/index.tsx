@@ -62,6 +62,47 @@ export default function WelcomeScreen() {
         router.push('/(auth)/register');
     };
 
+    const handleTestAdmin = async () => {
+        await AsyncStorage.setItem('user', JSON.stringify({
+            userId: 1,
+            email: 'admin@test.com',
+            fullName: 'Test Admin',
+            role: 'SUPER_ADMIN',
+            userType: 'ADMIN',
+            adminId: 1,
+            organizationId: 1,
+        }));
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        router.replace('/(tabs)/home');
+    };
+
+    const handleTestManager = async () => {
+        await AsyncStorage.setItem('user', JSON.stringify({
+            userId: 2,
+            email: 'manager@test.com',
+            fullName: 'Test Manager',
+            role: 'FLEET_MANAGER',
+            userType: 'FLEET_MANAGER',
+            adminId: 1,
+            organizationId: 1,
+        }));
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        router.replace('/(tabs)/home');
+    };
+
+    const handleTestDriver = async () => {
+        await AsyncStorage.setItem('user', JSON.stringify({
+            userId: 3,
+            email: 'driver@test.com',
+            fullName: 'Test Driver',
+            role: 'DRIVER',
+            userType: 'DRIVER',
+            organizationId: 1,
+        }));
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        router.replace('/(driver)/home');
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.primaryDark }]}>
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
@@ -133,6 +174,30 @@ export default function WelcomeScreen() {
                         size="large"
                         style={{ width: '100%' }}
                         icon={<Ionicons name="person-add-outline" size={20} color={isDarkMode ? colors.primaryBlue : colors.textPrimary} />}
+                    />
+                    <Button
+                        title="Test Admin (Bypass)"
+                        onPress={handleTestAdmin}
+                        variant="outline"
+                        size="large"
+                        style={{ width: '100%', marginTop: 8 }}
+                        icon={<Ionicons name="shield-checkmark" size={20} color={colors.successText} />}
+                    />
+                    <Button
+                        title="Test Manager (Bypass)"
+                        onPress={handleTestManager}
+                        variant="outline"
+                        size="large"
+                        style={{ width: '100%', marginTop: 8 }}
+                        icon={<Ionicons name="people-circle" size={20} color={colors.warningText} />}
+                    />
+                    <Button
+                        title="Test Driver (Bypass)"
+                        onPress={handleTestDriver}
+                        variant="outline"
+                        size="large"
+                        style={{ width: '100%', marginTop: 8 }}
+                        icon={<Ionicons name="car-sport" size={20} color={colors.primaryCyan} />}
                     />
                 </View>
                 <Text style={[styles.footer, { color: colors.textMuted }]}>

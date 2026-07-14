@@ -154,17 +154,7 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Organization Information Section */}
-                {user?.organizationName && (
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('profile.organizationInfo')}</Text>
-                        <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                            <InfoRow label={t('form.organizationName')} value={user.organizationName} icon="business" />
-                            <InfoRow label="ID Organisation" value={user.organizationId?.toString()} icon="id-card" />
-                            <InfoRow label="Rôle" value={user.adminRole} icon="shield-checkmark" />
-                        </View>
-                    </View>
-                )}
+
 
                 <View style={{ height: 40 }} />
             </ScrollView>

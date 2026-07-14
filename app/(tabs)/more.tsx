@@ -34,6 +34,18 @@ export default function MoreScreen() {
     const { t } = useTranslation();
     const { colors, isDarkMode, notificationsEnabled } = useTheme();
     const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+    const [userRole, setUserRole] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        const fetchRole = async () => {
+            const userStr = await AsyncStorage.getItem('user');
+            if (userStr) {
+                const userObj = JSON.parse(userStr);
+                setUserRole(userObj?.role || userObj?.userType);
+            }
+        };
+        fetchRole();
+    }, []);
 
     const performLogout = async () => {
         try {
@@ -61,10 +73,10 @@ export default function MoreScreen() {
         {
             title: t('more.management'),
             items: [
-                { id: 'managers', title: t('navigation.managers'), icon: 'people', route: '/(tabs)/managers', color: colors.accentPurple || '#8b5cf6' },
+                userRole !== 'FLEET_MANAGER' ? { id: 'managers', title: t('navigation.managers'), icon: 'people', route: '/(tabs)/managers', color: colors.accentPurple || '#8b5cf6' } : null,
                 { id: 'incidents', title: t('navigation.incidents'), icon: 'warning', route: '/(tabs)/incidents', color: colors.warningText },
                 { id: 'zones', title: t('navigation.zones'), icon: 'location', route: '/(tabs)/zones', color: colors.successText },
-            ],
+            ].filter((item): item is any => item !== null),
         },
         {
             title: t('more.analytics'),
@@ -77,11 +89,13 @@ export default function MoreScreen() {
         {
             title: t('more.account'),
             items: [
+                { id: 'profile', title: 'Mon Profil', icon: 'person', route: '/profile', color: colors.primaryBlue },
+                userRole === 'SUPER_ADMIN' ? { id: 'org_profile', title: 'Profil Organisation', icon: 'business', route: '/organization-profile', color: colors.primaryCyan } : null,
                 { id: 'subscription', title: t('navigation.subscription'), icon: 'card', route: '/(tabs)/subscription', color: colors.accentGold || '#f59e0b' },
                 { id: 'support', title: t('navigation.support'), icon: 'help-circle', route: '/(tabs)/support', color: colors.infoText },
                 { id: 'settings', title: t('navigation.settings'), icon: 'settings', route: '/(tabs)/settings', color: colors.textSecondary },
                 { id: 'logout', title: t('navigation.logout') || 'Déconnexion', icon: 'log-out', color: colors.errorText, isDestructive: true },
-            ],
+            ].filter((item): item is any => item !== null),
         },
     ];
 
