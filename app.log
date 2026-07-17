@@ -1,0 +1,84 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.6)
+
+2026-07-15T17:20:06.912+01:00  INFO 24904 --- [fleet-management] [           main] c.fleetman.backend.FleetManApplication   : Starting FleetManApplication v1.0.0-SNAPSHOT using Java 22.0.2 with PID 24904 (F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\target\fleet-management-backend-1.0.0-SNAPSHOT.jar started by Nehemie Turing in F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe)
+2026-07-15T17:20:06.917+01:00  INFO 24904 --- [fleet-management] [           main] c.fleetman.backend.FleetManApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-07-15T17:20:09.684+01:00  INFO 24904 --- [fleet-management] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-07-15T17:20:09.985+01:00  INFO 24904 --- [fleet-management] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 252 ms. Found 48 JPA repository interfaces.
+2026-07-15T17:20:11.953+01:00  INFO 24904 --- [fleet-management] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8082 (http)
+2026-07-15T17:20:11.985+01:00  INFO 24904 --- [fleet-management] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-15T17:20:11.985+01:00  INFO 24904 --- [fleet-management] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.24]
+2026-07-15T17:20:12.070+01:00  INFO 24904 --- [fleet-management] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-07-15T17:20:12.070+01:00  INFO 24904 --- [fleet-management] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5036 ms
+2026-07-15T17:20:12.807+01:00  INFO 24904 --- [fleet-management] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-07-15T17:20:12.942+01:00  INFO 24904 --- [fleet-management] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.8.Final
+2026-07-15T17:20:13.009+01:00  INFO 24904 --- [fleet-management] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-07-15T17:20:13.591+01:00  INFO 24904 --- [fleet-management] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-07-15T17:20:13.646+01:00  INFO 24904 --- [fleet-management] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-15T17:20:14.157+01:00  INFO 24904 --- [fleet-management] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@bcd9ed6
+2026-07-15T17:20:14.161+01:00  INFO 24904 --- [fleet-management] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-15T17:20:14.257+01:00  WARN 24904 --- [fleet-management] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-07-15T17:20:17.695+01:00  INFO 24904 --- [fleet-management] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-07-15T17:20:18.163+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.163+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_jwckdguv8xkq16jq8tq5k3pn9 » de la relation « brands » n'existe pas, ignore
+2026-07-15T17:20:18.163+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.163+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_5v2gvq951rwadgpkg6wcr8ue9 » de la relation « drivers » n'existe pas, ignore
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_rv410luf0uko5wop4i3sjeswd » de la relation « financial_parameters » n'existe pas, ignore
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_levse13e88a0y590n7pjfmr2c » de la relation « fuel_types » n'existe pas, ignore
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_tri3gdb5hid8wm7yrau1nd6n0 » de la relation « maintenance_parameters » n'existe pas, ignore
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.179+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_57cv2b7a7nba91s6ll73x10eu » de la relation « manufacturers » n'existe pas, ignore
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_pb2ncr3b0c9elkx8tqvi1sgy4 » de la relation « operational_parameters » n'existe pas, ignore
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_4599lsr5wpm0hese19yuaywbr » de la relation « transmission_types » n'existe pas, ignore
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_sp0nm9rujn2bx6kexw6uv35ks » de la relation « trips » n'existe pas, ignore
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.195+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_7jqd6cbrmi6j8jxhl0i4ilepr » de la relation « usage_types » n'existe pas, ignore
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_6dotkott2kjsp8vw4d0m25fb7 » de la relation « users » n'existe pas, ignore
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_bln0bn1dsb7e4l0i03qwkyqr7 » de la relation « vehicle_colors » n'existe pas, ignore
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_173hqmo28b5bmnn7n374wvoaf » de la relation « vehicle_models » n'existe pas, ignore
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.211+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_jt7assalc20vni94197lblf92 » de la relation « vehicle_sizes » n'existe pas, ignore
+2026-07-15T17:20:18.226+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.226+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_3vupqfm0cv4hpg7xukymc5r48 » de la relation « vehicle_types » n'existe pas, ignore
+2026-07-15T17:20:18.231+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.231+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_9vovnbiegxevdhqfcwvp2g8pj » de la relation « vehicles » n'existe pas, ignore
+2026-07-15T17:20:18.233+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Warning Code: 0, SQLState: 00000
+2026-07-15T17:20:18.233+01:00  WARN 24904 --- [fleet-management] [           main] o.h.engine.jdbc.spi.SqlExceptionHelper   : la contrainte « uk_oxh93rnw9ui3qfm14lp9l8646 » de la relation « wallets » n'existe pas, ignore
+2026-07-15T17:20:18.284+01:00  INFO 24904 --- [fleet-management] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-07-15T17:20:18.719+01:00  INFO 24904 --- [fleet-management] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-07-15T17:20:21.735+01:00  WARN 24904 --- [fleet-management] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-07-15T17:20:21.860+01:00  WARN 24904 --- [fleet-management] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 3db74b0b-aa2d-4566-961d-12875460e24d
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-07-15T17:20:22.766+01:00  INFO 24904 --- [fleet-management] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-07-15T17:20:22.850+01:00  INFO 24904 --- [fleet-management] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@d5b9704, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@326471ab, org.springframework.security.web.context.SecurityContextHolderFilter@7cb13e56, org.springframework.security.web.header.HeaderWriterFilter@66041d36, org.springframework.web.filter.CorsFilter@66af6b7b, org.springframework.security.web.authentication.logout.LogoutFilter@5b481d77, com.fleetman.backend.config.security.JwtAuthenticationFilter@1e366736, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2af114d2, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@35977ba7, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@5e232d07, org.springframework.security.web.session.SessionManagementFilter@38171f9, org.springframework.security.web.access.ExceptionTranslationFilter@74f1c9b9, org.springframework.security.web.access.intercept.AuthorizationFilter@54eaf69d]
+2026-07-15T17:20:23.753+01:00  INFO 24904 --- [fleet-management] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8082 (http) with context path ''
+2026-07-15T17:20:23.775+01:00  INFO 24904 --- [fleet-management] [           main] c.fleetman.backend.FleetManApplication   : Started FleetManApplication in 18.067 seconds (process running for 19.267)
+2026-07-15T17:20:24.301+01:00  INFO 24904 --- [fleet-management] [           main] c.fleetman.backend.config.DataBootstrap  : Compte super-admin cree : joeltaba4@gmail.com
+2026-07-15T17:23:41.118+01:00  INFO 24904 --- [fleet-management] [nio-8082-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-15T17:23:41.118+01:00  INFO 24904 --- [fleet-management] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-07-15T17:23:41.118+01:00  INFO 24904 --- [fleet-management] [nio-8082-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-07-15T17:26:25.209+01:00  INFO 24904 --- [fleet-management] [nio-8082-exec-3] o.springdoc.api.AbstractOpenApiResource  : Init duration for springdoc-openapi is: 2417 ms
+2026-07-15T18:17:05.932+01:00  WARN 24904 --- [fleet-management] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=40m51s419ms896µs300ns).
+2026-07-15T20:15:51.393+01:00  WARN 24904 --- [fleet-management] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h4m42s82ms705µs200ns).
+2026-07-15T20:43:40.300+01:00  WARN 24904 --- [fleet-management] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=27m48s906ms436µs600ns).
+2026-07-15T21:06:16.361+01:00  WARN 24904 --- [fleet-management] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m10s978ms477µs900ns).
+2026-07-15T21:17:54.697+01:00  WARN 24904 --- [fleet-management] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m8s242ms292µs800ns).

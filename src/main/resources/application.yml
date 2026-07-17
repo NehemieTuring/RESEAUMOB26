@@ -1,0 +1,81 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: fleet-management
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:fleetmanBD}
+    username: ${DB_USERNAME:fleet_admin}
+    password: ${DB_PASSWORD:fleet_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        default_schema: fleet
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        hbm2ddl:
+          create_namespaces: true
+
+  # Liquibase desactive : le schema est gere par Hibernate (ddl-auto=update)
+  liquibase:
+    enabled: false
+
+  sql:
+    init:
+      mode: never
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# JWT Configuration
+app:
+  jwt:
+    secret: "${JWT_SECRET:YourSuperSecretKeyForFleetManBackendThatIsAtLeast256BitsLongForHS256Signing!!}"
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
+
+  file-storage:
+    upload-dir: ./uploads
+
+  bootstrap:
+    admin:
+      username: joeltaba4
+      email: joeltaba4@gmail.com
+      password: "FleetMan2026!"
+      phone: "+237600000000"
+      firstname: Joel
+      lastname: Taba
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+  default-produces-media-type: application/json
+  packages-to-scan: com.fleetman.backend.controller
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
