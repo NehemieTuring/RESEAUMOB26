@@ -30,6 +30,11 @@ public class FileStorageService {
 
     /** Stocke le fichier sur disque + trace en BDD. Retourne l'URL relative servable. */
     public String store(MultipartFile file, UUID ownerId, String ownerType, String fileType) {
+        return "/api/v1/files/" + storeAndDescribe(file, ownerId, ownerType, fileType).getStoredPath();
+    }
+
+    /** Variante retournant la trace BDD complete (nom d'origine, type MIME, taille). */
+    public StoredFileEntity storeAndDescribe(MultipartFile file, UUID ownerId, String ownerType, String fileType) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Fichier vide.");
         }
@@ -48,8 +53,7 @@ public class FileStorageService {
                 .originalName(original).storedPath(storedName)
                 .contentType(file.getContentType()).sizeBytes(file.getSize())
                 .build();
-        storedFileRepository.save(entity);
-        return "/api/v1/files/" + storedName;
+        return storedFileRepository.save(entity);
     }
 
     public byte[] load(String storedName) {

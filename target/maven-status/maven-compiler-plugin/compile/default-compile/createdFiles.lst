@@ -53,6 +53,7 @@ com\fleetman\backend\controller\AdminManagerController.class
 com\fleetman\backend\repository\TransmissionTypeRepository.class
 com\fleetman\backend\controller\MaintenanceAlertController.class
 com\fleetman\backend\repository\AlertRuleRepository.class
+com\fleetman\backend\controller\dto\PublicDtos$PublicSubscriptionPlan.class
 com\fleetman\backend\repository\AssignmentRepository.class
 com\fleetman\backend\controller\ScheduleController.class
 com\fleetman\backend\controller\dto\CancelTripRequest.class
@@ -95,10 +96,12 @@ com\fleetman\backend\controller\IncidentController.class
 com\fleetman\backend\service\AlertRuleEngineService.class
 com\fleetman\backend\entity\AlertRuleEntity$AlertRuleEntityBuilder.class
 com\fleetman\backend\controller\AdminResourceController.class
+com\fleetman\backend\service\PublicRegistrationService.class
 com\fleetman\backend\entity\TripEntity$TripEntityBuilder.class
 com\fleetman\backend\exception\ScoringException.class
 com\fleetman\backend\service\VehicleMediaService.class
 com\fleetman\backend\exception\DomainException.class
+com\fleetman\backend\controller\dto\PublicDtos.class
 com\fleetman\backend\controller\NotificationController.class
 com\fleetman\backend\entity\DriverDocumentEntity$DriverDocumentEntityBuilder.class
 com\fleetman\backend\entity\GeofencePointEntity$GeofencePointEntityBuilder.class
@@ -137,6 +140,7 @@ com\fleetman\backend\entity\VehicleDocumentEntity.class
 com\fleetman\backend\repository\MaintenanceParameterRepository.class
 com\fleetman\backend\entity\GeofenceEventEntity$GeofenceEventEntityBuilder.class
 com\fleetman\backend\controller\ExpenseController.class
+com\fleetman\backend\controller\dto\PublicDtos$RegisterManagerRequest.class
 com\fleetman\backend\controller\dto\ResetPasswordRequest.class
 com\fleetman\backend\entity\StoredFileEntity$StoredFileEntityBuilder.class
 com\fleetman\backend\entity\DriverScoreEntity.class
@@ -150,6 +154,7 @@ com\fleetman\backend\config\security\JwtUtil.class
 com\fleetman\backend\entity\KpiSnapshotEntity$KpiSnapshotEntityBuilder.class
 com\fleetman\backend\service\FleetManagerService.class
 com\fleetman\backend\entity\GeofencePointZoneLinkageEntity.class
+com\fleetman\backend\controller\PublicController.class
 com\fleetman\backend\entity\AlertRuleEntity.class
 com\fleetman\backend\exception\GlobalExceptionHandler.class
 com\fleetman\backend\entity\VehicleModelEntity.class
@@ -196,7 +201,9 @@ com\fleetman\backend\controller\AccountController.class
 com\fleetman\backend\entity\VehicleColorEntity.class
 com\fleetman\backend\repository\GeofencePointZoneLinkageRepository.class
 com\fleetman\backend\repository\UserRoleRepository.class
+com\fleetman\backend\controller\dto\PublicDtos$RegisterManagerResponse.class
 com\fleetman\backend\controller\BudgetController.class
+com\fleetman\backend\controller\dto\PublicDtos$RegisterManagerDocument.class
 com\fleetman\backend\controller\AuthController.class
 com\fleetman\backend\entity\GeofencePointZoneLinkageEntity$GeofencePointZoneLinkageEntityBuilder.class
 com\fleetman\backend\repository\BrandRepository.class

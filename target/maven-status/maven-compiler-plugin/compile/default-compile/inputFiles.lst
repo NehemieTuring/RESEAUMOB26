@@ -47,6 +47,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\exception\FleetException.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\ChangeDriverRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\VehicleTypeRepository.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\service\PublicRegistrationService.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\service\TripService.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\UserDetail.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\DriverController.java
@@ -102,6 +103,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\TelemetryRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\SecurityUtils.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\exception\VehicleException.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\PublicController.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\SubscriptionPlanEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\VehicleRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\DocumentAlertEntity.java
@@ -205,6 +207,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\NotificationSettingRepository.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\VehicleDocumentEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\FinancialParameterRepository.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\PublicDtos.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\config\OpenApiConfig.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\UserRoleEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\HealthCheckController.java
