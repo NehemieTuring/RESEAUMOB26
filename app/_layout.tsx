@@ -18,6 +18,7 @@ import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { ToastProvider } from '../src/context/ToastContext';
 import { detectApiUrl } from '../src/constants/Config';
 import apiClient from '../src/services/api';
+import { restoreSession } from '../src/services/authApi';
 import '../src/i18n'; // Initialize i18n
 import { loadSavedLanguage } from '../src/i18n';
 
@@ -146,6 +147,9 @@ export default function RootLayout() {
       detectApiUrl().then(url => {
         apiClient.setBaseUrl(url);
       });
+
+      // Restaure le JWT persiste pour que les appels suivants soient authentifies.
+      restoreSession();
 
       // Load saved language preference
       loadSavedLanguage();

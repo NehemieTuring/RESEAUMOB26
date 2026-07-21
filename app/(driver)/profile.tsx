@@ -94,19 +94,33 @@ export default function DriverProfileScreen() {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = () => {
         setSaving(true);
-        // Simulation d'une requête PUT /api/drivers/{id}
         setTimeout(() => {
-            setUser(prev => ({
-                ...prev,
-                phoneNumber: formData.phone,
-                address: formData.address
-            }));
             setSaving(false);
+            setUser({...user, ...formData});
             setEditMode(false);
-            Alert.alert('Succès', 'Profil mis à jour avec succès');
-        }, 800);
+            Alert.alert("Succès", "Vos informations ont été mises à jour.");
+        }, 1000);
+    };
+
+    const handleLogout = () => {
+        Alert.alert(
+            "Déconnexion",
+            "Êtes-vous sûr de vouloir vous déconnecter ?",
+            [
+                { text: "Annuler", style: "cancel" },
+                { 
+                    text: "Se déconnecter", 
+                    style: "destructive",
+                    onPress: async () => {
+                        await AsyncStorage.removeItem('user');
+                        await AsyncStorage.removeItem('userToken');
+                        router.replace('/(auth)/login');
+                    }
+                }
+            ]
+        );
     };
 
     const InfoRow = ({ label, value, icon }: { label: string; value: string; icon: string }) => (
@@ -159,6 +173,9 @@ export default function DriverProfileScreen() {
                         </View>
                     </TouchableOpacity>
                     <Text style={[styles.userName, { color: colors.textPrimary }]}>{user.fullName}</Text>
+                    <Text style={[styles.userRole, { color: colors.primaryBlue, marginBottom: 8, marginTop: 4, textAlign: 'center', fontSize: 14, fontWeight: 'bold' }]}>
+                        CONDUCTEUR
+                    </Text>
                     <View style={[styles.statusBadge, { backgroundColor: user.status === 'ACTIVE' ? colors.successText + '20' : colors.errorText + '20' }]}>
                         <Ionicons name="checkmark-circle" size={14} color={user.status === 'ACTIVE' ? colors.successText : colors.errorText} style={{marginRight: 4}}/>
                         <Text style={[styles.statusText, { color: user.status === 'ACTIVE' ? colors.successText : colors.errorText }]}>
@@ -218,6 +235,16 @@ export default function DriverProfileScreen() {
                     </View>
                 )}
 
+                <View style={[styles.section, { marginTop: 16 }]}>
+                    <TouchableOpacity 
+                        style={[styles.logoutButton, { backgroundColor: colors.errorBg + '20', borderColor: colors.errorText + '40' }]}
+                        onPress={handleLogout}
+                    >
+                        <Ionicons name="log-out-outline" size={20} color={colors.errorText} style={{ marginRight: 8 }} />
+                        <Text style={[styles.logoutText, { color: colors.errorText }]}>Déconnexion</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={{ height: 40 }} />
             </ScrollView>
         </SafeAreaView>
@@ -256,5 +283,8 @@ const styles = StyleSheet.create({
     infoLabel: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
     infoValue: { fontSize: 15, fontWeight: '500' },
     
-    readOnlyWarning: { fontSize: 13, marginBottom: 16, fontStyle: 'italic' }
+    readOnlyWarning: { fontSize: 13, marginBottom: 16, fontStyle: 'italic' },
+    
+    logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, borderWidth: 1 },
+    logoutText: { fontSize: 16, fontWeight: '700' }
 });

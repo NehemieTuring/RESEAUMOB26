@@ -36,38 +36,38 @@ export interface MaintenanceCreate {
 export const maintenanceApi = {
     // Get all maintenances (or filtered by adminId)
     getAll: async (adminId?: number): Promise<Maintenance[]> => {
-        const url = adminId ? `/maintenances/admin/${adminId}` : '/maintenances';
+        const url = adminId ? '/v1/maintenances' : '/v1/maintenances';
         return apiClient.get<Maintenance[]>(url);
     },
 
     // Get maintenance by ID
     getById: async (maintenanceId: number): Promise<Maintenance> => {
-        return apiClient.get<Maintenance>(`/maintenances/${maintenanceId}`);
+        return apiClient.get<Maintenance>(`/v1/maintenances/${maintenanceId}`);
     },
 
     // Get maintenances by vehicle
     getByVehicle: async (vehicleId: number): Promise<Maintenance[]> => {
-        return apiClient.get<Maintenance[]>(`/maintenances/vehicle/${vehicleId}`);
+        return apiClient.get<Maintenance[]>(`/v1/maintenances?vehicleId=${vehicleId}`);
     },
 
     // Get maintenances by driver
     getByDriver: async (driverId: number): Promise<Maintenance[]> => {
-        return apiClient.get<Maintenance[]>(`/maintenances/driver/${driverId}`);
+        return apiClient.get<Maintenance[]>('/v1/maintenances');
     },
 
     // Create maintenance
     create: async (maintenance: MaintenanceCreate): Promise<Maintenance> => {
-        return apiClient.post<Maintenance>('/maintenances', maintenance);
+        return apiClient.post<Maintenance>('/v1/maintenances', maintenance);
     },
 
     // Update maintenance
     update: async (maintenanceId: number, maintenance: Partial<MaintenanceCreate>): Promise<Maintenance> => {
-        return apiClient.put<Maintenance>(`/maintenances/${maintenanceId}`, maintenance);
+        return apiClient.put<Maintenance>(`/v1/maintenances/${maintenanceId}`, maintenance);
     },
 
     // Delete maintenance
     delete: async (maintenanceId: number): Promise<void> => {
-        return apiClient.delete(`/maintenances/${maintenanceId}`);
+        return apiClient.delete(`/v1/maintenances/${maintenanceId}`);
     },
 };
 

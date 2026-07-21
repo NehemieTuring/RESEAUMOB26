@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { CreateModal, FormField, FormRow } from './CreateModal';
 import { FormInput } from './FormInput';
-import { driverApi } from '../services';
+import { driverApi, fleetApi } from '../services';
 import { useTheme } from '../context/ThemeContext';
 
 interface CreateDriverModalProps {
@@ -78,25 +78,21 @@ export const CreateDriverModal: React.FC<CreateDriverModalProps> = ({
 
         setLoading(true);
         try {
-            // Get adminId from stored user data
-            const userStr = await AsyncStorage.getItem('user');
-            const userObj = userStr ? JSON.parse(userStr) : null;
-            const adminId = userObj?.adminId || userObj?.userId;
-
-            if (!adminId) {
-                throw new Error(t('createDriver.noAdminIdError') || 'Impossible de créer un conducteur sans être connecté en tant qu\'administrateur.');
+            // Le backend rattache obligatoirement un conducteur a une flotte :
+            // on utilise la premiere flotte du gestionnaire connecte.
+            const fleets = await fleetApi.getAll();
+            if (!fleets.length) {
+                throw new Error('Aucune flotte disponible : creez d\'abord une flotte.');
             }
 
-            // Use createAsAdmin which assigns the driver to the Admin's system FleetManager
-            await driverApi.createAsAdmin(adminId, {
+            await driverApi.create({
+                fleetId: fleets[0].fleetId,
                 driverFirstName: formData.firstName,
                 driverLastName: formData.lastName,
                 driverEmail: formData.email,
                 driverPassword: formData.password,
                 driverPhoneNumber: formData.phone,
-                driverLicenseNumber: formData.licenseNumber || undefined,
-                driverEmergencyContactName: formData.emergencyContactName || undefined,
-                driverEmergencyContactPhone: formData.emergencyContactPhone || undefined,
+                driverLicenseNumber: formData.licenseNumber,
             });
 
             Alert.alert(t('common.success'), t('createDriver.success'));

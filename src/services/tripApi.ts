@@ -45,48 +45,48 @@ export interface TripUpdate {
 export const tripApi = {
     // Get all trips (or filtered by adminId)
     getAll: async (adminId?: number): Promise<Trip[]> => {
-        const url = adminId ? `/trips/admin/${adminId}` : '/trips';
+        const url = adminId ? '/v1/trips' : '/v1/trips';
         return apiClient.get<Trip[]>(url);
     },
 
     // Get trip by ID
     getById: async (tripId: number): Promise<Trip> => {
-        return apiClient.get<Trip>(`/trips/${tripId}`);
+        return apiClient.get<Trip>(`/v1/trips/${tripId}`);
     },
 
     // Get trips by driver
     getByDriver: async (driverId: number): Promise<Trip[]> => {
-        return apiClient.get<Trip[]>(`/trips/driver/${driverId}`);
+        return apiClient.get<Trip[]>('/v1/trips');
     },
 
     // Get trips by vehicle
     getByVehicle: async (vehicleId: number): Promise<Trip[]> => {
-        return apiClient.get<Trip[]>(`/trips/vehicle/${vehicleId}`);
+        return apiClient.get<Trip[]>('/v1/trips');
     },
 
     // Get trips by status
     getByStatus: async (status: TripStatus): Promise<Trip[]> => {
-        return apiClient.get<Trip[]>(`/trips/status/${status}`);
+        return apiClient.get<Trip[]>('/v1/trips');
     },
 
     // Create trip
     create: async (trip: TripCreate): Promise<Trip> => {
-        return apiClient.post<Trip>('/trips', trip);
+        return apiClient.post<Trip>('/v1/trips', trip);
     },
 
     // Update trip
     update: async (tripId: number, trip: TripUpdate): Promise<Trip> => {
-        return apiClient.put<Trip>(`/trips/${tripId}`, trip);
+        return apiClient.put<Trip>(`/v1/trips/${tripId}`, trip);
     },
 
     // Start trip
     start: async (tripId: number): Promise<Trip> => {
-        return apiClient.put<Trip>(`/trips/${tripId}`, { status: 'IN_PROGRESS' });
+        return apiClient.put<Trip>(`/v1/trips/${tripId}`, { status: 'IN_PROGRESS' });
     },
 
     // Complete trip
     complete: async (tripId: number, actualDistance: number): Promise<Trip> => {
-        return apiClient.put<Trip>(`/trips/${tripId}`, {
+        return apiClient.put<Trip>(`/v1/trips/${tripId}`, {
             status: 'COMPLETED',
             actualDistance,
             arrivalDatetime: new Date().toISOString()
@@ -95,12 +95,12 @@ export const tripApi = {
 
     // Cancel trip
     cancel: async (tripId: number): Promise<Trip> => {
-        return apiClient.put<Trip>(`/trips/${tripId}`, { status: 'CANCELLED' });
+        return apiClient.put<Trip>(`/v1/trips/${tripId}`, { status: 'CANCELLED' });
     },
 
     // Delete trip
     delete: async (tripId: number): Promise<void> => {
-        return apiClient.delete(`/trips/${tripId}`);
+        return apiClient.delete(`/v1/trips/${tripId}`);
     },
 };
 

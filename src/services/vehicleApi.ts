@@ -1,12 +1,45 @@
 /**
  * FleetMan Mobile - Vehicle API Service
+ * Connecte a FleetMan-Backend-Monolithe : /api/v1/vehicles
+ *
+ * Backend : { id, licensePlate, brand, model, status, fuelType, fleetId, ... }
+ * L'app manipule historiquement { vehicleId, vehicleMake, vehicleRegistrationNumber, ... }
+ * => adaptateurs ci-dessous.
  */
 
 import apiClient from './api';
 
-// Vehicle types matching backend
+export interface BackendVehicle {
+    id: string;
+    fleetId: string | null;
+    managerId: string | null;
+    currentDriverId: string | null;
+    vehicleTypeId: string | null;
+    licensePlate: string;
+    vehicleSerialNumber: string | null;
+    brand: string | null;
+    model: string | null;
+    manufacturingYear: number | null;
+    transmissionType: string | null;
+    fuelType: string | null;
+    tankCapacity: number | null;
+    totalSeatNumber: number | null;
+    averageFuelConsumption: number | null;
+    color: string | null;
+    status: string;
+    photoUrl: string | null;
+    operationalParameters?: {
+        currentSpeed: number | null;
+        fuelLevel: string | null;
+        mileage: number | null;
+        latitude: number | null;
+        longitude: number | null;
+    } | null;
+}
+
+/** Modele utilise par les ecrans de l'app. */
 export interface Vehicle {
-    vehicleId: number;
+    vehicleId: string;
     vehicleMake: string;
     vehicleModel: string;
     vehicleRegistrationNumber: string;
@@ -19,41 +52,32 @@ export interface Vehicle {
     speed: number;
     state: string;
     fuelType: string;
-    fleetId: number;
-    createdAt: string;
-    updatedAt: string;
+    fleetId: string | null;
+    photoUrl?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface VehicleCreate {
     vehicleMake: string;
     vehicleModel: string;
     vehicleRegistrationNumber: string;
-    type: string;
-    vehicleIdentificationNumber?: string;
-    vehicleDocument?: string;
-    vehicleDeviceIdAddress?: string;
-    fuelLevel?: number;
-    numberOfPassengers?: number;
-    speed?: number;
-    state: string;
-    fuelType: string;
-    fleetId: number;
-}
-
-export interface VehicleUpdate {
-    vehicleMake?: string;
-    vehicleModel?: string;
     type?: string;
     vehicleIdentificationNumber?: string;
-    vehicleDocument?: string;
-    vehicleDeviceIdAddress?: string;
-    fuelLevel?: number;
     numberOfPassengers?: number;
-    speed?: number;
     state?: string;
     fuelType?: string;
-    fleetId?: number;
+    fleetId?: string;
+    manufacturingYear?: number;
+    color?: string;
+    // Champs UI non transmis tels quels au backend.
+    fuelLevel?: number;
+    speed?: number;
+    vehicleDocument?: string;
+    vehicleDeviceIdAddress?: string;
 }
+
+export interface VehicleUpdate extends Partial<VehicleCreate> {}
 
 export interface VehicleGlobalStats {
     totalVehicles: number;
@@ -64,67 +88,115 @@ export interface VehicleGlobalStats {
     inAlarm: number;
 }
 
+const toApp = (v: BackendVehicle): Vehicle => ({
+    vehicleId: v.id,
+    vehicleMake: v.brand ?? '',
+    vehicleModel: v.model ?? '',
+    vehicleRegistrationNumber: v.licensePlate,
+    type: v.vehicleTypeId ?? '',
+    vehicleIdentificationNumber: v.vehicleSerialNumber ?? '',
+    vehicleDocument: '',
+    vehicleDeviceIdAddress: '',
+    fuelLevel: Number(v.operationalParameters?.fuelLevel ?? 0) || 0,
+    numberOfPassengers: v.totalSeatNumber ?? 0,
+    speed: v.operationalParameters?.currentSpeed ?? 0,
+    state: v.status,
+    fuelType: v.fuelType ?? '',
+    fleetId: v.fleetId,
+    photoUrl: v.photoUrl,
+});
+
+const toBackend = (v: VehicleCreate | VehicleUpdate) => ({
+    licensePlate: v.vehicleRegistrationNumber,
+    brand: v.vehicleMake,
+    model: v.vehicleModel,
+    fleetId: v.fleetId,
+    fuelType: v.fuelType,
+    totalSeatNumber: v.numberOfPassengers,
+    vehicleSerialNumber: v.vehicleIdentificationNumber,
+    manufacturingYear: v.manufacturingYear,
+    color: v.color,
+    vehicleTypeId: v.type || undefined,
+});
+
 export const vehicleApi = {
-    // Get all vehicles (or filtered by adminId)
-    getAll: async (adminId?: number): Promise<Vehicle[]> => {
-        const url = adminId ? `/vehicles/admin/${adminId}` : '/vehicles';
-        return apiClient.get<Vehicle[]>(url);
+    /** Tous les vehicules visibles par l'utilisateur connecte. */
+    getAll: async (): Promise<Vehicle[]> => {
+        const list = await apiClient.get<BackendVehicle[]>('/v1/vehicles');
+        return (list ?? []).map(toApp);
     },
 
-    // Get vehicle by ID
-    getById: async (vehicleId: number): Promise<Vehicle> => {
-        return apiClient.get<Vehicle>(`/vehicles/${vehicleId}`);
+    getById: async (vehicleId: string): Promise<Vehicle> => {
+        return toApp(await apiClient.get<BackendVehicle>(`/v1/vehicles/${vehicleId}`));
     },
 
-    // Get vehicles by fleet ID
-    getByFleetId: async (fleetId: number): Promise<Vehicle[]> => {
-        return apiClient.get<Vehicle[]>(`/vehicles/fleet/${fleetId}`);
+    /** Vehicules d'une flotte donnee. */
+    getByFleetId: async (fleetId: string): Promise<Vehicle[]> => {
+        const list = await apiClient.get<BackendVehicle[]>(`/v1/fleets/${fleetId}/vehicles`);
+        return (list ?? []).map(toApp);
     },
 
-    // Get vehicles by state
-    getByState: async (state: string): Promise<Vehicle[]> => {
-        return apiClient.get<Vehicle[]>(`/vehicles/state/${state}`);
-    },
-
-    // Get vehicles by type
-    getByType: async (type: string): Promise<Vehicle[]> => {
-        return apiClient.get<Vehicle[]>(`/vehicles/type/${type}`);
-    },
-
-    // Get vehicle by registration number
-    getByRegistrationNumber: async (registrationNumber: string): Promise<Vehicle> => {
-        return apiClient.get<Vehicle>(`/vehicles/registration/${registrationNumber}`);
-    },
-
-    // Create vehicle
+    /** Cree un vehicule (bouton "Nouveau vehicule"). */
     create: async (vehicle: VehicleCreate): Promise<Vehicle> => {
-        return apiClient.post<Vehicle>('/vehicles', vehicle);
+        return toApp(await apiClient.post<BackendVehicle>('/v1/vehicles', toBackend(vehicle)));
     },
 
-    // Update vehicle
-    update: async (vehicleId: number, vehicle: VehicleUpdate): Promise<Vehicle> => {
-        return apiClient.put<Vehicle>(`/vehicles/${vehicleId}`, vehicle);
+    /** Mise a jour partielle (le backend expose PATCH). */
+    update: async (vehicleId: string, vehicle: VehicleUpdate): Promise<Vehicle> => {
+        return toApp(await apiClient.patch<BackendVehicle>(`/v1/vehicles/${vehicleId}`, toBackend(vehicle)));
     },
 
-    // Delete vehicle
-    delete: async (vehicleId: number): Promise<void> => {
-        return apiClient.delete(`/vehicles/${vehicleId}`);
+    delete: async (vehicleId: string): Promise<void> => {
+        return apiClient.delete(`/v1/vehicles/${vehicleId}`);
     },
 
-    // Get global stats
-    getGlobalStats: async (adminId?: number): Promise<VehicleGlobalStats> => {
-        const url = adminId ? `/vehicles/stats/global?adminId=${adminId}` : '/vehicles/stats/global';
-        return apiClient.get<VehicleGlobalStats>(url);
+    /** Parametres operationnels (position, vitesse, carburant). */
+    getOperational: async (vehicleId: string): Promise<any> => {
+        return apiClient.get<any>(`/v1/vehicles/${vehicleId}/operational`);
     },
 
-    // Count by state
-    countByState: async (state: string): Promise<number> => {
-        return apiClient.get<number>(`/vehicles/count/state/${state}`);
+    updateOperational: async (vehicleId: string, data: Record<string, any>): Promise<any> => {
+        return apiClient.patch(`/v1/vehicles/${vehicleId}/operational`, data);
     },
 
-    // Count by type
-    countByType: async (type: string): Promise<number> => {
-        return apiClient.get<number>(`/vehicles/count/type/${type}`);
+    updateFinancial: async (vehicleId: string, data: Record<string, any>): Promise<any> => {
+        return apiClient.put(`/v1/vehicles/${vehicleId}/financial-parameters`, data);
+    },
+
+    updateMaintenance: async (vehicleId: string, data: Record<string, any>): Promise<any> => {
+        return apiClient.put(`/v1/vehicles/${vehicleId}/maintenance-parameters`, data);
+    },
+
+    /** Referentiels (marques, modeles, carburants...). */
+    getLookup: async (resource: string): Promise<any[]> => {
+        return apiClient.get<any[]>(`/v1/vehicles/lookup/${resource}`);
+    },
+
+    getAllResources: async (): Promise<any> => {
+        return apiClient.get<any>('/v1/vehicles/resources/all');
+    },
+
+    /** Galerie photo du vehicule. */
+    getMedia: async (vehicleId: string): Promise<any[]> => {
+        return apiClient.get<any[]>(`/v1/vehicles/${vehicleId}/media`);
+    },
+
+    deleteMedia: async (vehicleId: string, imageId: string): Promise<void> => {
+        return apiClient.delete(`/v1/vehicles/${vehicleId}/media/${imageId}`);
+    },
+
+    /** Statistiques globales calculees cote client (pas d'endpoint dedie). */
+    getGlobalStats: async (): Promise<VehicleGlobalStats> => {
+        const list = await vehicleApi.getAll();
+        const count = (s: string) => list.filter((v) => v.state === s).length;
+        return {
+            totalVehicles: list.length,
+            inService: count('ON_TRIP'),
+            outOfService: count('OUT_OF_SERVICE'),
+            parked: count('AVAILABLE'),
+            underMaintenance: count('MAINTENANCE'),
+            inAlarm: 0,
+        };
     },
 };
 

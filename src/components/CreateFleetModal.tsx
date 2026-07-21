@@ -156,8 +156,8 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
                 language: formData.language,
             });
 
-            // 2. Créer la Flotte avec l'ID du gestionnaire créé
-            await fleetApi.createForManager(manager.managerId, {
+            // 2. Creer la flotte (le backend la rattache au gestionnaire connecte)
+            await fleetApi.create({
                 fleetName: formData.name,
                 fleetDescription: formData.description || undefined,
                 fleetType: formData.fleetType,

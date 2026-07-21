@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import {
     View,
     Text,
+    ImageBackground,
     StyleSheet,
     ScrollView,
     KeyboardAvoidingView,
@@ -16,6 +17,7 @@ import {
     ActivityIndicator,
     TextInput,
     StatusBar,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -71,16 +73,23 @@ export default function LoginScreen() {
                 // Store user data
                 await AsyncStorage.setItem('user', JSON.stringify({
                     userId: response.userId,
+                    userUuid: response.userUuid,
                     email: response.email,
                     fullName: response.fullName,
                     role: response.role,
+                    roles: response.roles,
                     userType: response.userType,
                     adminId: response.adminId,
                     organizationId: response.organizationId,
                 }));
                 await AsyncStorage.setItem('isLoggedIn', 'true');
 
-                router.replace('/(tabs)/home');
+                // Redirection selon le role renvoye par le backend.
+                if (response.role === 'FLEET_DRIVER') {
+                    router.replace('/(driver)/home');
+                } else {
+                    router.replace('/(tabs)/home');
+                }
             } else {
                 Alert.alert(
                     t('auth.login.error'),
@@ -99,11 +108,17 @@ export default function LoginScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.primaryDark }]}>
+        <ImageBackground 
+            source={require('../../assets/login-truck-highway.jpg')} 
+            style={[styles.container, { backgroundColor: colors.primaryDark }]}
+            imageStyle={{ opacity: isDarkMode ? 0.8 : 0.7 }}
+        >
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
             <LinearGradient
-                colors={isDarkMode ? ['#09090b', '#0f172a', '#09090b'] : ['#f0f9ff', '#ffffff', '#f0f9ff']}
+                colors={isDarkMode ? ['rgba(9, 9, 11, 0.6)', 'rgba(15, 23, 42, 0.7)', 'rgba(9, 9, 11, 0.8)'] : ['rgba(248, 250, 252, 0.5)', 'rgba(255, 255, 255, 0.4)', 'rgba(241, 245, 249, 0.6)']}
                 style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
             />
 
             <PageHeader />
@@ -118,48 +133,40 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {/* Logo */}
-                    <View style={styles.logoContainer}>
-                        <View style={[styles.logoIcon, { backgroundColor: colors.primaryBlue + '15', borderColor: colors.primaryBlue + '30', borderWidth: 1 }]}>
-                            <Ionicons name="car-sport" size={48} color={isDarkMode ? colors.primaryCyan : colors.primaryBlue} />
-                        </View>
-                        <Text style={[styles.logoText, { color: colors.textPrimary }]}>
-                            Fleet<Text style={{ color: colors.primaryBlue }}>Man</Text>
-                        </Text>
-                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                            Fleet Management System
+                    {/* Header Logo equivalent */}
+                    <View style={styles.headerLogoContainer}>
+                        <Image 
+                            source={require('../../assets/images/logo-fleetman.png')} 
+                            style={{ width: 160, height: 45, resizeMode: 'contain', tintColor: '#ffffff' }}
+                        />
+                        <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+                            Votre flotte sous contrôle
                         </Text>
                     </View>
 
-                    {/* Login Form */}
                     <View style={[
                         styles.formCard,
                         {
-                            backgroundColor: colors.surfaceCard,
+                            backgroundColor: isDarkMode ? colors.surfaceCard : 'rgba(225, 228, 232, 0.95)',
                             borderColor: colors.borderGlass,
-                            shadowColor: isDarkMode ? '#000' : colors.primaryBlue,
-                            shadowOpacity: isDarkMode ? 0 : 0.05,
-                            shadowRadius: 15,
-                            elevation: isDarkMode ? 0 : 4
                         }
                     ]}>
-                        <Text style={[styles.formTitle, { color: colors.textPrimary }]}>{t('auth.login.title')}</Text>
-                        <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>{t('auth.login.subtitle')}</Text>
+                        <Text style={[styles.formTitle, { color: colors.textPrimary }]}>Bon retour parmi nous</Text>
+                        <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>Connectez-vous à votre compte FleetMan</Text>
 
                         {/* Email Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('form.email')}</Text>
+                            <Text style={[styles.label, { color: colors.textPrimary }]}>Email</Text>
                             <View style={[
                                 styles.inputContainer,
                                 {
-                                    backgroundColor: isDarkMode ? colors.surfaceGlass : '#f8fafc',
+                                    backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5',
                                     borderColor: errors.email ? colors.errorBorder : colors.borderGlass
                                 }
                             ]}>
-                                <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
                                 <TextInput
                                     style={[styles.input, { color: colors.textPrimary }]}
-                                    placeholder="email@example.com"
+                                    placeholder="root"
                                     placeholderTextColor={colors.textMuted}
                                     value={email}
                                     onChangeText={setEmail}
@@ -172,18 +179,22 @@ export default function LoginScreen() {
 
                         {/* Password Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('form.password')}</Text>
+                            <View style={styles.labelRow}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Mot de passe</Text>
+                                <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+                                    <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                                </TouchableOpacity>
+                            </View>
                             <View style={[
                                 styles.inputContainer,
                                 {
-                                    backgroundColor: isDarkMode ? colors.surfaceGlass : '#f8fafc',
+                                    backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5',
                                     borderColor: errors.password ? colors.errorBorder : colors.borderGlass
                                 }
                             ]}>
-                                <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
                                 <TextInput
                                     style={[styles.input, { color: colors.textPrimary }]}
-                                    placeholder="••••••••"
+                                    placeholder="••••"
                                     placeholderTextColor={colors.textMuted}
                                     value={password}
                                     onChangeText={setPassword}
@@ -196,61 +207,87 @@ export default function LoginScreen() {
                             {errors.password && <Text style={[styles.errorText, { color: colors.errorText }]}>{errors.password}</Text>}
                         </View>
 
-                        {/* Forgot Password */}
-                        <TouchableOpacity style={styles.forgotPassword}>
-                            <Text style={[styles.forgotPasswordText, { color: colors.primaryBlue }]}>{t('auth.login.forgotPassword')}</Text>
-                        </TouchableOpacity>
-
                         {/* Login Button */}
                         <TouchableOpacity
                             activeOpacity={0.8}
-                            style={[styles.loginButton, { backgroundColor: colors.primaryBlue }]}
+                            style={[styles.loginButton, { backgroundColor: '#3b82f6' }]}
                             onPress={handleLogin}
                             disabled={loading}
                         >
                             {loading ? (
                                 <ActivityIndicator color={colors.white} />
                             ) : (
-                                <Text style={[styles.loginButtonText, { color: colors.white }]}>{t('welcome.login')}</Text>
+                                <Text style={[styles.loginButtonText, { color: colors.white }]}>Se connecter</Text>
                             )}
+                        </TouchableOpacity>
+
+                        {/* Divider */}
+                        <View style={styles.dividerContainer}>
+                            <View style={[styles.dividerLine, { backgroundColor: colors.borderGlass }]} />
+                            <Text style={[styles.dividerText, { color: colors.textMuted, backgroundColor: isDarkMode ? colors.surfaceCard : '#e1e4e8' }]}>OU</Text>
+                            <View style={[styles.dividerLine, { backgroundColor: colors.borderGlass }]} />
+                        </View>
+
+                        {/* Google Button */}
+                        <TouchableOpacity style={[styles.googleButton, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5' }]}>
+                            <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                            <Text style={[styles.googleButtonText, { color: colors.textPrimary }]}>Continuer avec Google</Text>
                         </TouchableOpacity>
 
                         {/* Register Link */}
                         <View style={styles.registerContainer}>
-                            <Text style={[styles.registerText, { color: colors.textSecondary }]}>{t('auth.login.noAccount')} </Text>
+                            <Text style={[styles.registerText, { color: colors.textSecondary }]}>Pas encore de compte ? </Text>
                             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                                <Text style={[styles.registerLink, { color: colors.primaryBlue }]}>{t('auth.login.signUp')}</Text>
+                                <Text style={[styles.registerLink, { color: '#3b82f6' }]}>Créer un compte</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
+
+                    {/* Footer */}
+                    <Text style={styles.footerText}>
+                        © 2026 FleetMan. Tous droits réservés.
+                    </Text>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </View>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    keyboardView: { flex: 1 },
+    container: { flex: 1, width: '100%', minHeight: '100%' },
+    keyboardView: { flex: 1, width: '100%' },
     scrollView: { flex: 1 },
-    scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-    logoContainer: { alignItems: 'center', marginBottom: 40 },
-    logoIcon: { width: 84, height: 84, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    logoText: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
-    subtitle: { fontSize: 13, marginTop: 4, opacity: 0.8 },
-    formCard: { borderRadius: 20, padding: 24, borderWidth: 1 },
-    formTitle: { fontSize: 24, fontWeight: '800', marginBottom: 6, letterSpacing: -0.5 },
-    formSubtitle: { fontSize: 14, marginBottom: 28 },
+    scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24, paddingTop: 60 },
+    headerLogoContainer: { alignItems: 'center', marginBottom: 40 },
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    headerLogoText: { fontSize: 24, fontWeight: '800' },
+    headerSubtitle: { fontSize: 13, marginTop: 4, opacity: 0.9 },
+    formCard: { 
+        width: '100%',
+        maxWidth: 450,
+        borderRadius: 20, 
+        padding: 32, 
+        borderWidth: 1,
+        marginBottom: 40
+    },
+    formTitle: { fontSize: 28, fontWeight: '700', marginBottom: 6, letterSpacing: -0.5 },
+    formSubtitle: { fontSize: 15, marginBottom: 28 },
     inputGroup: { marginBottom: 20 },
-    label: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginLeft: 2 },
+    labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    label: { fontSize: 13, fontWeight: '700', marginLeft: 2, marginBottom: 8 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1 },
-    input: { flex: 1, paddingVertical: 14, marginLeft: 12, fontSize: 15 },
+    input: { flex: 1, paddingVertical: 14, fontSize: 15 },
     errorText: { fontSize: 12, marginTop: 6, marginLeft: 4 },
-    forgotPassword: { alignSelf: 'flex-end', marginBottom: 24 },
-    forgotPasswordText: { fontSize: 13, fontWeight: '600' },
-    loginButton: { paddingVertical: 18, borderRadius: 14, alignItems: 'center', marginBottom: 24 },
-    loginButtonText: { fontSize: 16, fontWeight: '700' },
+    forgotPasswordText: { fontSize: 13, fontWeight: '500', color: '#3b82f6' },
+    loginButton: { paddingVertical: 16, borderRadius: 24, alignItems: 'center', marginBottom: 20 },
+    loginButtonText: { fontSize: 16, fontWeight: '600' },
+    dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+    dividerLine: { flex: 1, height: 1 },
+    dividerText: { marginHorizontal: 12, fontSize: 12, fontWeight: '600', paddingHorizontal: 4 },
+    googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 24, marginBottom: 24, gap: 10 },
+    googleButtonText: { fontSize: 14, fontWeight: '600' },
     registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     registerText: { fontSize: 14 },
-    registerLink: { fontSize: 14, fontWeight: '700' },
+    registerLink: { fontSize: 14, fontWeight: '600' },
+    footerText: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 'auto' },
 });

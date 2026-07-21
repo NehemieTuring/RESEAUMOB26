@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FleetMan Mobile",
+    "name": "FleetMan",
     "slug": "fleetman-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,7 +38,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "http://localhost:3000/api"
+      "apiUrl": "http://localhost:3000/api",
+      "router": {},
+      "eas": {
+        "projectId": "50e806ad-209a-4a44-a26b-a4107cb66dcf"
+      }
     }
   }
 }

@@ -74,53 +74,54 @@ export interface IncidentUpdate {
 export const incidentApi = {
     // Get all incidents (or filtered by adminId)
     getAll: async (adminId?: number): Promise<Incident[]> => {
-        const url = adminId ? `/incidents/admin/${adminId}` : '/incidents';
+        const url = adminId ? '/v1/operations/incidents' : '/v1/operations/incidents';
         return apiClient.get<Incident[]>(url);
     },
 
     // Get incident by ID
     getById: async (incidentId: number): Promise<Incident> => {
-        return apiClient.get<Incident>(`/incidents/${incidentId}`);
+        return apiClient.get<Incident>(`/v1/operations/incidents/${incidentId}`);
     },
 
     // Get incidents by vehicle ID
     getByVehicleId: async (vehicleId: number): Promise<Incident[]> => {
-        return apiClient.get<Incident[]>(`/incidents/vehicle/${vehicleId}`);
+        return apiClient.get<Incident[]>(`/v1/operations/incidents/vehicle/${vehicleId}`);
     },
 
     // Get incidents by driver ID
     getByDriverId: async (driverId: number): Promise<Incident[]> => {
-        return apiClient.get<Incident[]>(`/incidents/driver/${driverId}`);
+        return apiClient.get<Incident[]>(`/v1/operations/incidents/driver/${driverId}`);
     },
 
     // Get incidents by status
     getByStatus: async (status: IncidentStatus): Promise<Incident[]> => {
-        return apiClient.get<Incident[]>(`/incidents/status/${status}`);
+        return apiClient.get<Incident[]>(`/v1/operations/incidents/filter?status=${status}`);
     },
 
     // Get incidents by severity
     getBySeverity: async (severity: IncidentSeverity): Promise<Incident[]> => {
-        return apiClient.get<Incident[]>(`/incidents/severity/${severity}`);
+        return apiClient.get<Incident[]>(`/v1/operations/incidents/filter?severity=${severity}`);
     },
 
     // Create incident
     create: async (incident: IncidentCreate): Promise<Incident> => {
-        return apiClient.post<Incident>('/incidents', incident);
+        return apiClient.post<Incident>('/v1/operations/incidents', incident);
     },
 
     // Update incident
     update: async (incidentId: number, incident: IncidentUpdate): Promise<Incident> => {
-        return apiClient.put<Incident>(`/incidents/${incidentId}`, incident);
+        return apiClient.put<Incident>(`/v1/operations/incidents/${incidentId}`, incident);
     },
 
     // Update incident status
-    updateStatus: async (incidentId: number, status: IncidentStatus): Promise<Incident> => {
-        return apiClient.patch<Incident>(`/incidents/${incidentId}/status/${status}`, {});
+    updateStatus: async (incidentId: string, status: IncidentStatus): Promise<Incident> => {
+        // Le backend attend PATCH /{id}/status avec le statut dans le corps.
+        return apiClient.patch<Incident>(`/v1/operations/incidents/${incidentId}/status`, { status });
     },
 
     // Delete incident
     delete: async (incidentId: number): Promise<void> => {
-        return apiClient.delete(`/incidents/${incidentId}`);
+        return apiClient.delete(`/v1/operations/incidents/${incidentId}`);
     },
 };
 

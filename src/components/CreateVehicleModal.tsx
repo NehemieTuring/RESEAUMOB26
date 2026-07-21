@@ -80,10 +80,10 @@ export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
             const adminId = user?.adminId;
 
             // Fetch only fleets for this admin
-            const data = await fleetApi.getAll(adminId);
+            const data = await fleetApi.getAll();
             setFleets(data);
             if (data.length > 0 && !formData.fleetId) {
-                setFormData(prev => ({ ...prev, fleetId: data[0].fleetId.toString() }));
+                setFormData(prev => ({ ...prev, fleetId: data[0].fleetId }));
             }
         } catch (error) {
             console.error('Error loading fleets:', error);
@@ -126,7 +126,7 @@ export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
                 numberOfPassengers: parseInt(formData.passengerCapacity) || 5,
                 state: formData.state,
                 fuelType: formData.fuelType,
-                fleetId: parseInt(formData.fleetId),
+                fleetId: formData.fleetId,
             });
 
             Alert.alert(t('common.success'), t('createVehicle.success'));

@@ -12,6 +12,9 @@ import {
     Dimensions,
     StatusBar,
     TouchableOpacity,
+    ImageBackground,
+    ScrollView,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -104,10 +107,14 @@ export default function WelcomeScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.primaryDark }]}>
+        <ImageBackground 
+            source={require('../assets/africa-globe-hero.jpg')} 
+            style={[styles.container, { backgroundColor: colors.primaryDark }]}
+            imageStyle={{ opacity: isDarkMode ? 0.8 : 0.7 }}
+        >
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
             <LinearGradient
-                colors={isDarkMode ? ['#09090b', '#0f172a', '#09090b'] : ['#f8fafc', '#ffffff', '#f1f5f9']}
+                colors={isDarkMode ? ['rgba(9, 9, 11, 0.6)', 'rgba(15, 23, 42, 0.7)', 'rgba(9, 9, 11, 0.8)'] : ['rgba(248, 250, 252, 0.5)', 'rgba(255, 255, 255, 0.4)', 'rgba(241, 245, 249, 0.6)']}
                 style={StyleSheet.absoluteFillObject}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -115,18 +122,26 @@ export default function WelcomeScreen() {
             <View style={[styles.decorativeCircle1, { backgroundColor: isDarkMode ? 'rgba(14, 165, 233, 0.08)' : 'rgba(2, 132, 199, 0.05)' }]} />
             <View style={[styles.decorativeCircle2, { backgroundColor: isDarkMode ? 'rgba(20, 184, 166, 0.06)' : 'rgba(13, 148, 136, 0.04)' }]} />
             <PageHeader showBackButton={false} />
-            <Animated.View
-                style={[
-                    styles.content,
-                    {
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-                    },
-                ]}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
             >
-                <View style={styles.logoContainer}>
-                    <Logo size="large" />
-                </View>
+                <Animated.View
+                    style={{
+                        opacity: fadeAnim,
+                        transform: [
+                            { translateY: slideAnim },
+                            { scale: scaleAnim }
+                        ]
+                    }}
+                >
+                    <View style={styles.logoContainer}>
+                        <Image 
+                            source={require('../assets/images/logo-fleetman.png')} 
+                            style={{ width: 200, height: 60, resizeMode: 'contain', tintColor: '#ffffff' }}
+                        />
+                    </View>
                 <View style={styles.heroContainer}>
                     <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>
                         {`${t('welcome.title') || 'Manage your fleet'}\n`}
@@ -175,42 +190,19 @@ export default function WelcomeScreen() {
                         style={{ width: '100%' }}
                         icon={<Ionicons name="person-add-outline" size={20} color={isDarkMode ? colors.primaryBlue : colors.textPrimary} />}
                     />
-                    <Button
-                        title="Test Admin (Bypass)"
-                        onPress={handleTestAdmin}
-                        variant="outline"
-                        size="large"
-                        style={{ width: '100%', marginTop: 8 }}
-                        icon={<Ionicons name="shield-checkmark" size={20} color={colors.successText} />}
-                    />
-                    <Button
-                        title="Test Manager (Bypass)"
-                        onPress={handleTestManager}
-                        variant="outline"
-                        size="large"
-                        style={{ width: '100%', marginTop: 8 }}
-                        icon={<Ionicons name="people-circle" size={20} color={colors.warningText} />}
-                    />
-                    <Button
-                        title="Test Driver (Bypass)"
-                        onPress={handleTestDriver}
-                        variant="outline"
-                        size="large"
-                        style={{ width: '100%', marginTop: 8 }}
-                        icon={<Ionicons name="car-sport" size={20} color={colors.primaryCyan} />}
-                    />
                 </View>
                 <Text style={[styles.footer, { color: colors.textMuted }]}>
                     {t('welcome.copyright')}
                 </Text>
-            </Animated.View>
-        </View>
+                </Animated.View>
+            </ScrollView>
+        </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flex: 1, width: '100%', minHeight: '100%'
     },
     themeToggle: {
         position: 'absolute',
@@ -241,7 +233,7 @@ const styles = StyleSheet.create({
         borderRadius: width * 0.3,
     },
     content: {
-        flex: 1,
+        flexGrow: 1,
         paddingHorizontal: 24,
         paddingTop: 16,
         paddingBottom: 40,

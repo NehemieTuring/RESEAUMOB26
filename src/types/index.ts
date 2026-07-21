@@ -71,6 +71,10 @@ export interface LoginResponse {
     success: boolean;
     organizationId?: number;
     adminId?: number;
+    /** Identifiant reel de l'utilisateur cote backend (UUID). */
+    userUuid?: string;
+    /** Ensemble des roles renvoyes par le backend. */
+    roles?: string[];
 }
 
 // ============ ADMIN TYPES ============

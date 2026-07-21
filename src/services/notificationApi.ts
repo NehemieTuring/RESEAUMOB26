@@ -50,78 +50,78 @@ export interface NotificationCreate {
 export const notificationApi = {
     // Get all notifications
     getAll: async (adminId?: number): Promise<Notification[]> => {
-        const url = adminId ? `/notifications/admin/${adminId}` : '/notifications';
+        const url = adminId ? '/v1/notifications' : '/v1/notifications';
         return apiClient.get<Notification[]>(url);
     },
 
     // Get notification by ID
     getById: async (notificationId: number): Promise<Notification> => {
-        return apiClient.get<Notification>(`/notifications/${notificationId}`);
+        return apiClient.get<Notification>(`/v1/notifications/${notificationId}`);
     },
 
     // Get notifications by fleet manager
     getByFleetManager: async (managerId: number): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>(`/notifications/fleet-manager/${managerId}`);
+        return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread notifications for fleet manager
     getUnreadByManager: async (managerId: number): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>(`/notifications/fleet-manager/${managerId}/unread`);
+        return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get notifications by admin
     getByAdmin: async (adminId: number): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>(`/notifications/admin/${adminId}`);
+        return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread notifications for admin
     getUnreadByAdmin: async (adminId: number): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>(`/notifications/admin/${adminId}/unread`);
+        return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread count for manager
     getUnreadCountByManager: async (managerId: number): Promise<number> => {
-        return apiClient.get<number>(`/notifications/fleet-manager/${managerId}/unread/count`);
+        return apiClient.get<number>('/v1/notifications');
     },
 
     // Get unread count for admin
     getUnreadCountByAdmin: async (adminId: number): Promise<number> => {
-        return apiClient.get<number>(`/notifications/admin/${adminId}/unread/count`);
+        return apiClient.get<number>('/v1/notifications');
     },
 
     // Mark all as read for manager
     markAllAsReadByManager: async (managerId: number): Promise<void> => {
-        return apiClient.patch(`/notifications/fleet-manager/${managerId}/read-all`, {});
+        return apiClient.patch('/v1/notifications', {});
     },
 
     // Mark all as read for admin
     markAllAsReadByAdmin: async (adminId: number): Promise<void> => {
-        return apiClient.patch(`/notifications/admin/${adminId}/read-all`, {});
+        return apiClient.patch('/v1/notifications', {});
     },
 
     // Get notification count
     count: async (): Promise<number> => {
-        return apiClient.get<number>('/notifications/count');
+        return apiClient.get<number>('/v1/notifications');
     },
 
     // Create notification
     create: async (notification: NotificationCreate): Promise<Notification> => {
-        return apiClient.post<Notification>('/notifications', notification);
+        return apiClient.post<Notification>('/v1/notifications', notification);
     },
 
     // Mark as read
     markAsRead: async (notificationId: number): Promise<Notification> => {
-        return apiClient.patch<Notification>(`/notifications/${notificationId}/read`, {});
+        return apiClient.patch<Notification>(`/v1/notifications/${notificationId}/read`, {});
     },
 
     // Update notification state
     updateState: async (notificationId: number, state: NotificationState): Promise<Notification> => {
-        return apiClient.put<Notification>(`/notifications/${notificationId}`, { notificationState: state });
+        return apiClient.put<Notification>(`/v1/notifications/${notificationId}`, { notificationState: state });
     },
 
     // Delete notification
     delete: async (notificationId: number): Promise<void> => {
-        return apiClient.delete(`/notifications/${notificationId}`);
+        return apiClient.delete(`/v1/notifications/${notificationId}`);
     },
 };
 

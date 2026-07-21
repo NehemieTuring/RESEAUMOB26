@@ -6,6 +6,7 @@
 // List of possible backend IP addresses to try
 // Add your IPs here - the app will automatically use the first one that works
 const POSSIBLE_API_HOSTS = [
+    'https://reseaumob26.onrender.com', // Serveur de production (Render)
     'http://localhost:9080',          // Web/localhost
     'http://192.168.170.96:9080',    // WiFi actuel ✅
     'http://192.168.79.96:9080',     // Ancien WiFi

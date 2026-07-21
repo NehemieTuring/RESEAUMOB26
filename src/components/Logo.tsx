@@ -1,31 +1,29 @@
 /**
  * FleetMan Mobile - Logo Component
- * Logo with theme support
+ * Replaced with the new logo-fleetman.png generated from the SVG.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet, ViewStyle, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 interface LogoProps {
-    size?: 'small' | 'medium' | 'large';
-    showText?: boolean;
+    size?: 'small' | 'medium' | 'large' | 'xlarge';
     style?: ViewStyle;
 }
 
 export const Logo: React.FC<LogoProps> = ({
     size = 'medium',
-    showText = true,
     style,
 }) => {
-    const { colors } = useTheme();
+    const { colors, isDarkMode } = useTheme();
 
     const getSize = () => {
         switch (size) {
-            case 'small': return { icon: 24, text: 18 };
-            case 'large': return { icon: 48, text: 32 };
-            default: return { icon: 36, text: 24 };
+            case 'small': return { width: 100, height: 35 };
+            case 'large': return { width: 180, height: 60 };
+            case 'xlarge': return { width: 220, height: 80 };
+            default: return { width: 140, height: 45 };
         }
     };
 
@@ -33,45 +31,23 @@ export const Logo: React.FC<LogoProps> = ({
 
     return (
         <View style={[styles.container, style]}>
-            <View style={[
-                styles.iconContainer,
-                {
-                    width: dimensions.icon + 16,
-                    height: dimensions.icon + 16,
-                    backgroundColor: colors.primaryBlue + '20',
-                }
-            ]}>
-                <Ionicons name="car-sport" size={dimensions.icon} color={colors.primaryCyan} />
-            </View>
-            {showText && (
-                <Text style={[
-                    styles.text,
-                    {
-                        fontSize: dimensions.text,
-                        color: colors.textPrimary,
-                    }
-                ]}>
-                    <Text style={{ color: colors.primaryCyan }}>Fleet</Text>
-                    <Text style={{ color: colors.primaryBlue }}>Man</Text>
-                </Text>
-            )}
+            <Image 
+                source={require('../../assets/images/logo-fleetman.png')}
+                style={{
+                    width: dimensions.width,
+                    height: dimensions.height,
+                    resizeMode: 'contain',
+                    tintColor: isDarkMode ? '#ffffff' : undefined // Optional: white logo in dark mode if needed
+                }}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    iconContainer: {
-        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    text: {
-        fontWeight: '700',
     },
 });
 

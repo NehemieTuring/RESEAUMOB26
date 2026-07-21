@@ -23,12 +23,53 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { DashboardHeader } from '../../src/components';
 import { changeLanguage, AVAILABLE_LANGUAGES } from '../../src/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
 
 export default function SettingsScreen() {
     const router = useRouter();
     const { t, i18n } = useTranslation();
     const { colors, isDarkMode, toggleTheme, notificationsEnabled, toggleNotifications } = useTheme();
     const currentLanguage = i18n.language || 'fr';
+    const [updateAvailable, setUpdateAvailable] = React.useState(false);
+    const [isCheckingUpdate, setIsCheckingUpdate] = React.useState(false);
+
+    React.useEffect(() => {
+        const checkUpdate = async () => {
+            try {
+                const update = await Updates.checkForUpdateAsync();
+                if (update.isAvailable) {
+                    setUpdateAvailable(true);
+                }
+            } catch (error) {
+                console.log('Error checking for updates:', error);
+            }
+        };
+        // Only run in production/build mode, checking updates in DEV usually errors
+        if (!__DEV__) {
+            checkUpdate();
+        }
+    }, []);
+
+    const handleUpdateApp = async () => {
+        if (!updateAvailable) {
+            Alert.alert("À jour", "Votre application est déjà à la dernière version.");
+            return;
+        }
+        try {
+            setIsCheckingUpdate(true);
+            await Updates.fetchUpdateAsync();
+            Alert.alert(
+                "Mise à jour prête",
+                "L'application va maintenant redémarrer pour appliquer la mise à jour.",
+                [{ text: "OK", onPress: () => Updates.reloadAsync() }]
+            );
+        } catch (error) {
+            Alert.alert("Erreur", "Impossible de télécharger la mise à jour.");
+            console.error(error);
+        } finally {
+            setIsCheckingUpdate(false);
+        }
+    };
 
     const handleLanguageChange = async () => {
         const newLang = currentLanguage === 'fr' ? 'en' : 'fr';
@@ -46,19 +87,17 @@ export default function SettingsScreen() {
             ],
         },
         {
-            title: 'Account',
+            title: 'About & System',
             items: [
-                { id: 'profile', icon: 'person', label: 'Profile', onPress: () => router.push('/profile') },
-                { id: 'security', icon: 'shield', label: 'Security', onPress: () => { } },
-                { id: 'notifications_link', icon: 'notifications', label: t('notifications.title'), onPress: () => router.push('/(tabs)/notifications') },
-                { id: 'subscription', icon: 'card', label: t('navigation.subscription'), onPress: () => router.push('/(tabs)/subscription') },
-            ].filter((item): item is any => item !== null),
-        },
-        {
-            title: 'About',
-            items: [
-                { id: 'help', icon: 'help-circle', label: t('support.helpCenter'), onPress: () => router.push('/(tabs)/support') },
-                { id: 'terms', icon: 'document-text', label: 'Terms & Conditions', onPress: () => router.push('/(auth)/terms') },
+                { 
+                    id: 'update', 
+                    icon: 'cloud-download', 
+                    label: updateAvailable ? 'Nouvelle mise à jour (OTA)' : 'Vérifier les mises à jour', 
+                    onPress: handleUpdateApp,
+                    // We can pass a custom color flag
+                    isSuccess: updateAvailable,
+                    isDestructive: false
+                },
                 { id: 'version', icon: 'information-circle', label: 'Version', value: '1.0.0' },
             ],
         },
@@ -117,17 +156,23 @@ export default function SettingsScreen() {
                                         activeOpacity={isSwitch ? 1 : 0.7}
                                     >
                                         <View style={[styles.iconContainer, {
-                                            backgroundColor: item.isDestructive ? colors.errorBg + '40' : colors.primaryBlue + '20'
+                                            backgroundColor: item.isDestructive ? colors.errorBg + '40' : 
+                                                           item.isSuccess ? '#10b98120' : 
+                                                           colors.primaryBlue + '20'
                                         }]}>
                                             <Ionicons
                                                 name={item.icon as any}
                                                 size={20}
-                                                color={item.isDestructive ? colors.errorText : colors.primaryBlue}
+                                                color={item.isDestructive ? colors.errorText : 
+                                                       item.isSuccess ? '#10b981' : 
+                                                       colors.primaryBlue}
                                             />
                                         </View>
                                         <Text style={[
                                             styles.settingLabel,
-                                            { color: item.isDestructive ? colors.errorText : colors.textPrimary }
+                                            { color: item.isDestructive ? colors.errorText : 
+                                                     item.isSuccess ? '#10b981' : 
+                                                     colors.textPrimary }
                                         ]}>
                                             {item.label}
                                         </Text>

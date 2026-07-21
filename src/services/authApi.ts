@@ -1,233 +1,269 @@
 /**
  * FleetMan Mobile - Authentication & Admin API Services
- * Connected to Spring Boot Backend
+ * Connecte au backend FleetMan-Backend-Monolithe (Spring Boot, prefixe /api/v1).
+ *
+ * Le backend expose un login UNIFIE (/v1/auth/login) base sur un JWT :
+ * il n'y a pas d'endpoints separes admin / fleet-manager / driver.
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from './api';
-import {
-    Admin,
-    AdminCreate,
-    Organization,
-    OrganizationCreate,
-    LoginRequest,
-    LoginResponse
-} from '../types';
+import { Admin, LoginRequest, LoginResponse, Organization } from '../types';
+
+const AUTH_TOKEN_KEY = '@fleetman_auth_token';
+const REFRESH_TOKEN_KEY = '@fleetman_refresh_token';
+const USER_DATA_KEY = '@fleetman_user_data';
+
+/** UserDetail renvoye par le backend. */
+export interface BackendUserDetail {
+    id: string;
+    username: string;
+    email: string;
+    phone: string | null;
+    firstName: string;
+    lastName: string;
+    service: string | null;
+    roles: string[];
+    permissions: string[];
+    photoUrl: string | null;
+    companyName: string | null;
+    licenceNumber: string | null;
+    vehicleId: string | null;
+    isActive: boolean;
+    lastLoginAt: string | null;
+}
+
+export interface BackendAuthResponse {
+    accessToken: string;
+    refreshToken: string;
+    user: BackendUserDetail;
+}
+
+/** Ordre de priorite si l'utilisateur cumule plusieurs roles. */
+const ROLE_PRIORITY = ['FLEET_SUPER_ADMIN', 'FLEET_ADMIN', 'FLEET_MANAGER', 'FLEET_DRIVER'];
+
+export const primaryRole = (roles: string[] = []): string =>
+    ROLE_PRIORITY.find((r) => roles.includes(r)) ?? (roles[0] ?? '');
+
+/** Traduit un role backend en "userType" attendu par les ecrans existants. */
+const toUserType = (role: string): string => {
+    switch (role) {
+        case 'FLEET_SUPER_ADMIN':
+        case 'FLEET_ADMIN':
+            return 'ADMIN';
+        case 'FLEET_MANAGER':
+            return 'FLEET_MANAGER';
+        case 'FLEET_DRIVER':
+            return 'DRIVER';
+        default:
+            return '';
+    }
+};
+
+/** Persiste la session et arme le Bearer token du client HTTP. */
+export const persistSession = async (auth: BackendAuthResponse): Promise<void> => {
+    apiClient.setToken(auth.accessToken);
+    await AsyncStorage.multiSet([
+        [AUTH_TOKEN_KEY, auth.accessToken],
+        [REFRESH_TOKEN_KEY, auth.refreshToken ?? ''],
+        [USER_DATA_KEY, JSON.stringify(auth.user)],
+    ]);
+};
+
+/** Restaure le token au demarrage de l'app (a appeler dans le layout racine). */
+export const restoreSession = async (): Promise<BackendUserDetail | null> => {
+    const [token, raw] = await Promise.all([
+        AsyncStorage.getItem(AUTH_TOKEN_KEY),
+        AsyncStorage.getItem(USER_DATA_KEY),
+    ]);
+    if (!token) return null;
+    apiClient.setToken(token);
+    try {
+        return raw ? (JSON.parse(raw) as BackendUserDetail) : null;
+    } catch {
+        return null;
+    }
+};
+
+export const clearSession = async (): Promise<void> => {
+    apiClient.setToken(null);
+    await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY]);
+};
 
 // ============ AUTH API ============
 
 export const authApi = {
-    // Admin login
-    loginAdmin: async (credentials: LoginRequest): Promise<LoginResponse> => {
-        return apiClient.post<LoginResponse>('/auth/admin/login', credentials);
-    },
-
-    // Fleet Manager login
-    loginFleetManager: async (credentials: LoginRequest): Promise<LoginResponse> => {
-        return apiClient.post<LoginResponse>('/auth/fleet-manager/login', credentials);
-    },
-
-    // Driver login
-    loginDriver: async (credentials: LoginRequest): Promise<LoginResponse> => {
-        return apiClient.post<LoginResponse>('/auth/driver/login', credentials);
-    },
-
-    // Generic login (tries admin first, then fleet manager, then driver)
+    /** Login unifie : POST /v1/auth/login { identifier, password }. */
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-        // Try admin login first
         try {
-            const response = await apiClient.post<LoginResponse>('/auth/admin/login', credentials);
-            if (response.success) return response;
-        } catch (e) { /* continue */ }
+            const res = await apiClient.post<BackendAuthResponse>('/v1/auth/login', {
+                identifier: credentials.email,
+                password: credentials.password,
+            });
 
-        // Try fleet manager login
-        try {
-            const response = await apiClient.post<LoginResponse>('/auth/fleet-manager/login', credentials);
-            if (response.success) return response;
-        } catch (e) { /* continue */ }
+            await persistSession(res);
 
-        // Try driver login
-        try {
-            const response = await apiClient.post<LoginResponse>('/auth/driver/login', credentials);
-            if (response.success) return response;
-        } catch (e) { /* continue */ }
-
-        // Return error if all fail
-        return {
-            success: false,
-            message: 'Identifiants incorrects',
-            userId: 0,
-            email: '',
-            fullName: '',
-            role: '',
-            userType: ''
-        };
+            const role = primaryRole(res.user.roles);
+            return {
+                success: true,
+                message: 'Connexion reussie',
+                userId: 0, // le backend utilise des UUID : voir userUuid
+                userUuid: res.user.id,
+                email: res.user.email,
+                fullName: `${res.user.firstName ?? ''} ${res.user.lastName ?? ''}`.trim(),
+                role,
+                userType: toUserType(role),
+                roles: res.user.roles,
+            } as LoginResponse;
+        } catch (e: any) {
+            return {
+                success: false,
+                message: e?.message || 'Identifiants incorrects',
+                userId: 0,
+                email: '',
+                fullName: '',
+                role: '',
+                userType: '',
+            } as LoginResponse;
+        }
     },
 
-    // Inscription transactionnelle complète (Admin + Organisation en une seule requête)
-    registerComplete: async (registrationData: {
-        // Admin data
-        adminFirstName: string;
-        adminLastName: string;
-        adminEmail: string;
-        adminPassword: string;
-        adminPhoneNumber: string;
-        adminIdCardNumber?: string;
-        personalAddress?: string;
-        personalCity?: string;
-        personalPostalCode?: string;
-        personalCountry?: string;
-        taxNumber?: string;
-        niu?: string;
-        gender: string;
-        language?: string;
-        // Organization data
-        organizationName: string;
-        organizationDomainName?: string;
-        organizationPhone: string;
-        registrationNumber?: string;
-        organizationAddress: string;
-        organizationCity: string;
-        organizationCountry: string;
-        organizationUIN?: string;
-        organizationTaxId?: string;
-        organizationType?: string;
-        subscriptionPlan?: string;
-    }): Promise<{
-        success: boolean;
-        message: string;
-        admin?: Admin;
-        organization?: Organization;
-    }> => {
-        return apiClient.post('/registration/complete', registrationData);
+    /** Profil de l'utilisateur connecte. */
+    me: async (): Promise<BackendUserDetail> => {
+        return apiClient.get<BackendUserDetail>('/v1/auth/me');
+    },
+
+    /** Rafraichit le jeton d'acces. */
+    refresh: async (refreshToken: string): Promise<BackendAuthResponse> => {
+        const res = await apiClient.post<BackendAuthResponse>('/v1/auth/refresh', { refreshToken });
+        await persistSession(res);
+        return res;
+    },
+
+    logout: async (): Promise<void> => clearSession(),
+
+    forgotPassword: async (email: string): Promise<void> => {
+        return apiClient.post('/v1/auth/forgot-password', { email });
+    },
+
+    resetPassword: async (resetToken: string, newPassword: string): Promise<void> => {
+        return apiClient.post('/v1/auth/reset-password', { resetToken, newPassword });
+    },
+
+    /** Inscription publique d'un gestionnaire (sans authentification). */
+    registerManager: async (registrationData: any): Promise<{ id: string; status: string; message: string }> => {
+        return apiClient.post('/v1/public/register-manager', registrationData);
+    },
+
+    /** Offres d'abonnement publiques. */
+    subscriptionPlans: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/v1/public/subscription-plans');
+    },
+};
+
+// ============ COMPTE (utilisateur connecte) ============
+
+export const accountApi = {
+    updateProfile: async (data: { firstName?: string; lastName?: string; phone?: string }): Promise<BackendUserDetail> => {
+        return apiClient.post<BackendUserDetail>('/v1/account/profile', data);
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+        return apiClient.post('/v1/account/password', { currentPassword, newPassword });
+    },
+
+    uploadPhoto: async (fileUri: string, mimeType: string, fileName: string): Promise<BackendUserDetail> => {
+        return apiClient.uploadFile<BackendUserDetail>('/v1/account/photo', fileUri, mimeType, fileName);
+    },
+
+    deleteAccount: async (): Promise<void> => {
+        return apiClient.delete('/v1/account');
     },
 };
 
 // ============ ADMIN API ============
 
 export const adminApi = {
-    // Get all admins
-    getAll: async (): Promise<Admin[]> => {
-        return apiClient.get<Admin[]>('/admins');
+    /** Liste des gestionnaires (role FLEET_MANAGER). */
+    getManagers: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/v1/admin/managers');
     },
 
-    // Get admin by ID
-    getById: async (adminId: number): Promise<Admin> => {
-        return apiClient.get<Admin>(`/admins/${adminId}`);
+    /** Detail d'un utilisateur. */
+    getUser: async (userId: string): Promise<any> => {
+        return apiClient.get<any>(`/v1/admin/users/${userId}`);
     },
 
-    // Get admin by email
-    getByEmail: async (email: string): Promise<Admin> => {
-        return apiClient.get<Admin>(`/admins/email/${email}`);
+    activateManager: async (userId: string): Promise<void> => {
+        return apiClient.post(`/v1/admin/managers/${userId}/activate`);
     },
 
-    // Get admins by role
-    getByRole: async (role: string): Promise<Admin[]> => {
-        return apiClient.get<Admin[]>(`/admins/role/${role}`);
+    deactivateManager: async (userId: string): Promise<void> => {
+        return apiClient.post(`/v1/admin/managers/${userId}/deactivate`);
     },
 
-    // Get admin count
-    count: async (): Promise<number> => {
-        return apiClient.get<number>('/admins/count');
+    deleteManager: async (userId: string): Promise<void> => {
+        return apiClient.delete(`/v1/admin/managers/${userId}`);
     },
 
-    // Create admin (registration)
-    create: async (admin: AdminCreate): Promise<Admin> => {
-        return apiClient.post<Admin>('/admins', admin);
+    /** Cree un administrateur. */
+    createAdmin: async (data: any): Promise<Admin> => {
+        return apiClient.post<Admin>('/v1/admin/admins', data);
     },
 
-    // Update admin
-    update: async (adminId: number, admin: Partial<AdminCreate>): Promise<Admin> => {
-        return apiClient.put<Admin>(`/admins/${adminId}`, admin);
+    /** Ajoute un role a un utilisateur. */
+    addRole: async (userId: string, role: string): Promise<void> => {
+        return apiClient.post(`/v1/admin/users/${userId}/roles`, { role });
     },
 
-    // Delete admin
-    delete: async (adminId: number): Promise<void> => {
-        return apiClient.delete(`/admins/${adminId}`);
+    /** Statistiques d'administration (remplace les anciens /count). */
+    getStats: async (): Promise<any> => {
+        return apiClient.get<any>('/v1/admin/stats');
     },
 
-    // Change password
-    changePassword: async (adminId: number, data: { oldPassword: string; newPassword: string }): Promise<any> => {
-        return apiClient.post(`/admins/${adminId}/change-password`, data);
+    /** Referentiel des types de vehicule. */
+    getVehicleTypes: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/v1/admin/resources/vehicle-types');
     },
 
-    // Get organization for admin
-    getOrganization: async (adminId: number): Promise<Organization> => {
-        return apiClient.get<Organization>(`/admins/${adminId}/organization`);
+    createVehicleType: async (data: { code: string; label: string; description?: string }): Promise<any> => {
+        return apiClient.post('/v1/admin/resources/vehicle-types', data);
     },
 
-    // Create Super Admin (for registration flow)
-    createSuperAdmin: async (admin: AdminCreate): Promise<Admin> => {
-        // Try the dedicated superadmin endpoint first
-        try {
-            return await apiClient.post<Admin>('/admins/superadmin', admin);
-        } catch (error: any) {
-            // If the endpoint doesn't exist, fall back to creating a regular admin
-            // The admin data should already have adminRole: SUPER_ADMIN set
-            console.log('[AdminApi] Falling back to regular admin creation...');
-            return apiClient.post<Admin>('/admins', admin);
-        }
+    deleteVehicleType: async (id: string): Promise<void> => {
+        return apiClient.delete(`/v1/admin/resources/vehicle-types/${id}`);
     },
 };
 
-// ============ ORGANIZATION API ============
+// ============ ORGANISATION ============
+// Le monolithe n'a pas de notion d'"organisation" separee : le profil societe
+// est porte par le gestionnaire de flotte (fleet-managers).
 
 export const organizationApi = {
-    // Get all organizations
-    getAll: async (): Promise<Organization[]> => {
-        return apiClient.get<Organization[]>('/organizations');
+    /** Profil societe du gestionnaire connecte. */
+    updateCompany: async (data: {
+        companyName?: string;
+        companyPhone?: string;
+        companyAddress?: string;
+        companyCity?: string;
+        companyLogoUrl?: string;
+    }): Promise<Organization> => {
+        return apiClient.put<Organization>('/v1/fleet-managers/me/company', data);
     },
 
-    // Get organization by ID
-    getById: async (organizationId: number): Promise<Organization> => {
-        return apiClient.get<Organization>(`/organizations/${organizationId}`);
+    /** Liste des gestionnaires de flotte. */
+    getAll: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/v1/fleet-managers');
     },
 
-    // Get organization count
-    count: async (): Promise<number> => {
-        return apiClient.get<number>('/organizations/count');
-    },
-
-    // Create organization
-    create: async (organization: OrganizationCreate): Promise<Organization> => {
-        return apiClient.post<Organization>('/organizations', organization);
-    },
-
-    // Update organization
-    update: async (organizationId: number, organization: Partial<OrganizationCreate>): Promise<Organization> => {
-        return apiClient.put<Organization>(`/organizations/${organizationId}`, organization);
-    },
-
-    // Delete organization
-    delete: async (organizationId: number): Promise<void> => {
-        return apiClient.delete(`/organizations/${organizationId}`);
-    },
-
-    // Create admin for organization
-    createAdmin: async (organizationId: number, admin: AdminCreate): Promise<Admin> => {
-        return apiClient.post<Admin>(`/organizations/${organizationId}/admins`, admin);
-    },
-
-    // Get admins for organization
-    getAdmins: async (organizationId: number): Promise<Admin[]> => {
-        return apiClient.get<Admin[]>(`/organizations/${organizationId}/admins`);
-    },
-
-    // Upload logo
-    uploadLogo: async (organizationId: number, fileUri: string): Promise<Organization> => {
-        const formData = new FormData();
-        // @ts-ignore
-        formData.append('file', {
-            uri: fileUri,
-            name: 'logo.jpg',
-            type: 'image/jpeg',
-        });
-
-        return apiClient.post<Organization>(`/organizations/${organizationId}/logo`, formData);
+    getById: async (userId: string): Promise<any> => {
+        return apiClient.get<any>(`/v1/fleet-managers/${userId}`);
     },
 };
 
 export default {
     auth: authApi,
+    account: accountApi,
     admin: adminApi,
     organization: organizationApi,
 };

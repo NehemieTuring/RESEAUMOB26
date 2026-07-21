@@ -3,6 +3,7 @@
  * Axios client configured for Spring Boot backend
  */
 
+import { Platform } from 'react-native';
 import { API_BASE_URL } from '../constants/Config';
 import { showGlobalToast } from '../context/ToastContext';
 
@@ -64,47 +65,31 @@ class ApiClient {
             fetchConfig.body = isFormData ? config.body : JSON.stringify(config.body);
         }
 
-        console.log(`[API MOCK] Intercepted ${config.method} ${url}`, isFormData ? '[FormData]' : (config.body ? JSON.stringify(config.body) : ''));
-
-        // Short-circuit API calls and return mock data to prevent backend queries
-        return new Promise<T>((resolve) => {
-            setTimeout(() => {
-                if (config.method === 'GET') {
-                    // Try to guess the expected return type based on endpoint name
-                    if (
-                        endpoint.includes('all') || 
-                        endpoint.includes('list') || 
-                        endpoint.includes('recent') ||
-                        endpoint.includes('vehicles') ||
-                        endpoint.includes('fleets') ||
-                        endpoint.includes('drivers') ||
-                        endpoint.includes('managers') ||
-                        endpoint.includes('incidents') ||
-                        endpoint.includes('notifications')
-                    ) {
-                        if (!endpoint.includes('/count') && !endpoint.includes('unread')) {
-                            return resolve([] as unknown as T);
-                        }
-                    }
-                    if (endpoint.includes('count') || endpoint.includes('unread')) {
-                        return resolve(0 as unknown as T);
-                    }
-                    return resolve({} as unknown as T);
-                } else if (endpoint.includes('login')) {
-                    return resolve({ 
-                        success: true, 
-                        userId: 1, 
-                        email: 'test@example.com', 
-                        fullName: 'Test User', 
-                        role: 'SUPER_ADMIN',
-                        userType: 'ADMIN',
-                        organizationId: 1
-                    } as unknown as T);
-                } else {
-                    return resolve({ success: true, message: 'Action mockée avec succès' } as unknown as T);
+        // --- REAL FETCH EXECUTION ---
+        // (L'interception "mock" qui court-circuitait tous les appels a ete supprimee :
+        //  l'application dialogue desormais reellement avec le backend.)
+        try {
+            console.log(`[API REAL] Executing ${config.method} ${url}`);
+            const response = await fetch(url, fetchConfig);
+            
+            // Check if response is ok
+            if (!response.ok) {
+                let errorMessage = `Erreur HTTP: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.detail || errorMessage;
+                } catch (e) {
+                    // response is not json
                 }
-            }, 100); // Simulate network delay
-        });
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            return data as T;
+        } catch (error) {
+            console.error(`[API ERROR] ${config.method} ${url}:`, error);
+            throw error;
+        }
     }
 
     async get<T>(endpoint: string): Promise<T> {
@@ -125,6 +110,33 @@ class ApiClient {
 
     async delete<T>(endpoint: string): Promise<T> {
         return this.request<T>(endpoint, { method: 'DELETE' });
+    }
+
+    async uploadFile<T>(endpoint: string, fileUri: string, mimeType: string, fileName: string): Promise<T> {
+        const formData = new FormData();
+
+        if (Platform.OS === 'web') {
+            // Sur le web, FormData exige un vrai Blob/File : un objet { uri, name, type }
+            // serait serialise en "[object Object]" et produirait un multipart invalide.
+            const res = await fetch(fileUri);
+            const blob = await res.blob();
+            formData.append('file', blob, fileName);
+        } else {
+            // Sur iOS/Android, React Native accepte directement cet objet.
+            formData.append('file', {
+                uri: fileUri,
+                name: fileName,
+                type: mimeType || 'application/octet-stream',
+            } as any);
+        }
+
+        // NE PAS definir Content-Type manuellement : le runtime doit generer
+        // l'en-tete avec le "boundary", sinon le serveur ne peut pas parser le corps
+        // (erreur "Failed to parse multipart servlet request").
+        return this.request<T>(endpoint, {
+            method: 'POST',
+            body: formData,
+        });
     }
 }
 

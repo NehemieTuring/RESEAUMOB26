@@ -1,17 +1,30 @@
 /**
  * FleetMan Mobile - Fleet API Service
- * Connected to backend endpoints for fleet management
+ * Connecte a FleetMan-Backend-Monolithe : /api/v1/fleets
+ *
+ * Le backend expose { id, managerId, name, phoneNumber, createdAt, vehicleCount }.
+ * On conserve l'interface historique de l'app via des adaptateurs.
  */
 
 import apiClient from './api';
 
-// Fleet types matching backend DTO
+/** DTO renvoye par le backend. */
+export interface BackendFleet {
+    id: string;
+    managerId: string;
+    name: string;
+    phoneNumber: string | null;
+    createdAt: string | null;
+    vehicleCount: number | null;
+}
+
+/** Modele utilise par les ecrans de l'app. */
 export interface Fleet {
-    fleetId: number;
+    fleetId: string;
     fleetName: string;
     fleetDescription: string;
     fleetType: string;
-    fleetManagerId?: number;
+    fleetManagerId?: string;
     fleetManagerName?: string;
     vehiclesCount: number;
     isActive?: boolean;
@@ -22,91 +35,95 @@ export interface Fleet {
 export interface FleetCreate {
     fleetName: string;
     fleetDescription?: string;
-    fleetType: string;
+    fleetType?: string;
+    /** Le backend stocke un numero de telephone au niveau de la flotte. */
+    phoneNumber?: string;
 }
 
 export interface FleetUpdate {
     fleetName?: string;
     fleetDescription?: string;
     fleetType?: string;
+    phoneNumber?: string;
 }
 
+const toApp = (f: BackendFleet): Fleet => ({
+    fleetId: f.id,
+    fleetName: f.name,
+    fleetDescription: '',
+    fleetType: '',
+    fleetManagerId: f.managerId,
+    vehiclesCount: f.vehicleCount ?? 0,
+    isActive: true,
+    createdAt: f.createdAt ?? undefined,
+});
+
+const toBackend = (f: FleetCreate | FleetUpdate) => ({
+    name: (f as FleetCreate).fleetName,
+    phoneNumber: f.phoneNumber,
+});
+
 export const fleetApi = {
-    /**
-     * Get all fleets for an admin (uses /fleets/admin/{adminId})
-     * This fetches fleets managed by all FleetManagers of this Admin
-     */
-    getByAdminId: async (adminId: number): Promise<Fleet[]> => {
-        return apiClient.get<Fleet[]>(`/fleets/admin/${adminId}`);
+    /** Toutes les flottes du gestionnaire connecte. */
+    getAll: async (): Promise<Fleet[]> => {
+        const list = await apiClient.get<BackendFleet[]>('/v1/fleets');
+        return (list ?? []).map(toApp);
     },
 
-    /**
-     * Get fleets by fleet manager ID
-     */
-    getByFleetManagerId: async (fleetManagerId: number): Promise<Fleet[]> => {
-        return apiClient.get<Fleet[]>(`/fleets/fleet-manager/${fleetManagerId}`);
+    getById: async (fleetId: string): Promise<Fleet> => {
+        return toApp(await apiClient.get<BackendFleet>(`/v1/fleets/${fleetId}`));
     },
 
-    /**
-     * Get all fleets (for global view)
-     */
-    getAll: async (adminId?: number): Promise<Fleet[]> => {
-        if (adminId) {
-            return apiClient.get<Fleet[]>(`/fleets/admin/${adminId}`);
-        }
-        return apiClient.get<Fleet[]>('/fleets');
+    /** Cree une flotte (bouton "Nouvelle flotte"). */
+    create: async (fleet: FleetCreate): Promise<Fleet> => {
+        return toApp(await apiClient.post<BackendFleet>('/v1/fleets', toBackend(fleet)));
     },
 
-    /**
-     * Get fleet by ID
-     */
-    getById: async (fleetId: number): Promise<Fleet> => {
-        return apiClient.get<Fleet>(`/fleets/${fleetId}`);
+    update: async (fleetId: string, fleet: FleetUpdate): Promise<Fleet> => {
+        return toApp(await apiClient.put<BackendFleet>(`/v1/fleets/${fleetId}`, toBackend(fleet)));
     },
 
-    /**
-     * Create fleet as Admin (uses /fleets/admin/{adminId})
-     * Creates a fleet via the system FleetManager of the Admin
-     */
-    createAsAdmin: async (adminId: number, fleet: FleetCreate): Promise<Fleet> => {
-        return apiClient.post<Fleet>(`/fleets/admin/${adminId}`, fleet);
+    delete: async (fleetId: string): Promise<void> => {
+        return apiClient.delete(`/v1/fleets/${fleetId}`);
     },
 
-    /**
-     * Create fleet for a specific FleetManager
-     */
-    createForManager: async (fleetManagerId: number, fleet: FleetCreate): Promise<Fleet> => {
-        return apiClient.post<Fleet>(`/fleets/fleet-manager/${fleetManagerId}`, fleet);
+    /** Statistiques d'une flotte. */
+    getStats: async (fleetId: string): Promise<any> => {
+        return apiClient.get<any>(`/v1/fleets/${fleetId}/stats`);
     },
 
-    /**
-     * Update fleet
-     */
-    update: async (fleetId: number, fleet: FleetUpdate): Promise<Fleet> => {
-        return apiClient.put<Fleet>(`/fleets/${fleetId}`, fleet);
+    /** Vehicules d'une flotte. */
+    getVehicles: async (fleetId: string): Promise<any[]> => {
+        return apiClient.get<any[]>(`/v1/fleets/${fleetId}/vehicles`);
     },
 
-    /**
-     * Delete fleet
-     */
-    delete: async (fleetId: number): Promise<void> => {
-        return apiClient.delete(`/fleets/${fleetId}`);
+    /** Rattache un vehicule existant a la flotte. */
+    addVehicle: async (fleetId: string, vehicleId: string): Promise<void> => {
+        return apiClient.post(`/v1/fleets/${fleetId}/vehicles`, { vehicleId });
     },
 
-    /**
-     * Count fleets
-     */
+    removeVehicle: async (fleetId: string, vehicleId: string): Promise<void> => {
+        return apiClient.delete(`/v1/fleets/${fleetId}/vehicles/${vehicleId}`);
+    },
+
+    /** Conducteurs d'une flotte. */
+    getDrivers: async (fleetId: string): Promise<any[]> => {
+        return apiClient.get<any[]>(`/v1/fleets/${fleetId}/drivers`);
+    },
+
+    /** Rattache un conducteur existant (par email ou username). */
+    addDriver: async (fleetId: string, identifier: string): Promise<void> => {
+        return apiClient.post(`/v1/fleets/${fleetId}/drivers`, { identifier });
+    },
+
+    removeDriver: async (fleetId: string, driverId: string): Promise<void> => {
+        return apiClient.delete(`/v1/fleets/${fleetId}/drivers/${driverId}`);
+    },
+
+    /** Compte les flottes (le backend n'expose pas de /count dedie). */
     count: async (): Promise<number> => {
-        return apiClient.get<number>('/fleets/count');
-    },
-
-    // Legacy method for backward compatibility
-    create: async (fleet: FleetCreate & { adminId: number }): Promise<Fleet> => {
-        return apiClient.post<Fleet>(`/fleets/admin/${fleet.adminId}`, {
-            fleetName: fleet.fleetName,
-            fleetDescription: fleet.fleetDescription,
-            fleetType: fleet.fleetType,
-        });
+        const list = await apiClient.get<BackendFleet[]>('/v1/fleets');
+        return (list ?? []).length;
     },
 };
 

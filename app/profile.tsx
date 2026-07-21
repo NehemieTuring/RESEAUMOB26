@@ -133,7 +133,8 @@ export default function ProfileScreen() {
                         {user?.adminFirstName} {user?.adminLastName}
                     </Text>
                     <Text style={[styles.userRole, { color: colors.primaryBlue }]}>
-                        {user?.adminRole === 'SUPER_ADMIN' ? 'Administrateur Principal' : 'Gestionnaire'}
+                        {user?.adminRole === 'SUPER_ADMIN' ? 'ADMINISTRATEUR PRINCIPAL' : 
+                         user?.adminRole === 'ORGANIZATION_MANAGER' ? 'GESTIONNAIRE' : 'ADMINISTRATEUR'}
                     </Text>
                 </View>
 

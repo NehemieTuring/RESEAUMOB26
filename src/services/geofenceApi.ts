@@ -40,23 +40,23 @@ export const geofenceApi = {
     // Get all geofences
     getAll: async (adminId?: number): Promise<Geofence[]> => {
         // Use admin endpoint if adminId is provided
-        const url = adminId ? `/geofences/admin/${adminId}` : '/geofences';
+        const url = adminId ? '/v1/geofences/mine' : '/v1/geofences';
         return apiClient.get<Geofence[]>(url);
     },
 
     // Get geofence by ID
     getById: async (geofenceId: number): Promise<Geofence> => {
-        return apiClient.get<Geofence>(`/geofences/${geofenceId}`);
+        return apiClient.get<Geofence>(`/v1/geofences/${geofenceId}`);
     },
 
     // Get geofences by fleet manager
     getByFleetManager: async (managerId: number): Promise<Geofence[]> => {
-        return apiClient.get<Geofence[]>(`/geofences/manager/${managerId}`);
+        return apiClient.get<Geofence[]>('/v1/geofences/mine');
     },
 
     // Get geofence count
     count: async (): Promise<number> => {
-        return apiClient.get<number>('/geofences/count');
+        return apiClient.get<number>('/v1/geofences');
     },
 
     // Create circle geofence
@@ -72,7 +72,7 @@ export const geofenceApi = {
             fleetManagerId: geofence.fleetManagerId,
             geofenceStatus: geofence.geofenceStatus || "OPERATIONAL_ZONE"
         };
-        return apiClient.post<Geofence>('/geofences/circle', payload);
+        return apiClient.post<Geofence>('/v1/geofences', payload);
     },
 
     // Create polygon geofence
@@ -99,7 +99,7 @@ export const geofenceApi = {
             fleetManagerId: geofence.fleetManagerId
         };
 
-        return apiClient.post<Geofence>('/geofences/polygon', payload);
+        return apiClient.post<Geofence>('/v1/geofences', payload);
     },
 
     // Create circle geofence as Admin (uses admin endpoint)
@@ -113,7 +113,7 @@ export const geofenceApi = {
             radius: geofence.radius,
             geofenceStatus: geofence.geofenceStatus || "OPERATIONAL_ZONE"
         };
-        return apiClient.post<Geofence>(`/geofences/circle/admin/${adminId}`, payload);
+        return apiClient.post<Geofence>('/v1/geofences/mine', payload);
     },
 
     // Create polygon geofence as Admin (uses admin endpoint)
@@ -133,17 +133,17 @@ export const geofenceApi = {
                 coordinates: coordinates
             }
         };
-        return apiClient.post<Geofence>(`/geofences/polygon/admin/${adminId}`, payload);
+        return apiClient.post<Geofence>('/v1/geofences/mine', payload);
     },
 
     // Update geofence
     update: async (geofenceId: number, geofence: Partial<GeofenceCircleCreate>): Promise<Geofence> => {
-        return apiClient.put<Geofence>(`/geofences/${geofenceId}`, geofence);
+        return apiClient.put<Geofence>(`/v1/geofences/${geofenceId}`, geofence);
     },
 
     // Delete geofence
     delete: async (geofenceId: number): Promise<void> => {
-        return apiClient.delete(`/geofences/${geofenceId}`);
+        return apiClient.delete(`/v1/geofences/${geofenceId}`);
     },
 };
 
