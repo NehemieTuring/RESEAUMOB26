@@ -60,7 +60,7 @@ public class PublicRegistrationService {
                 .lastName(req.lastName())
                 .phone(req.phone())
                 .passwordHash(passwordEncoder.encode(req.password()))
-                .isActive(false) // en attente de validation par un admin
+                .isActive(true) // Modifié de false à true pour faciliter le développement
                 .build();
         user = userRepository.save(user);
 
