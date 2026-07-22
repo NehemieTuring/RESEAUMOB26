@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
-import { driverApi, Driver } from '../../src/services';
+import { driverApi, Driver, vehicleApi, Vehicle } from '../../src/services';
 import {
     DashboardHeader,
     ConfirmModal,
@@ -50,6 +50,7 @@ export default function DriversScreen() {
     const { colors } = useTheme();
     const params = useLocalSearchParams();
     const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -75,7 +76,10 @@ export default function DriversScreen() {
             const user = userStr ? JSON.parse(userStr) : null;
             const adminId = user?.adminId;
 
-            const data = await driverApi.getAll(adminId);
+            const [data, vehiclesData] = await Promise.all([
+                driverApi.getAll(),
+                vehicleApi.getAll()
+            ]);
 
             // If we reach here, backend is online
             setBackendOnline(true);
@@ -83,6 +87,7 @@ export default function DriversScreen() {
 
             setDrivers(data);
             setFilteredDrivers(data);
+            setVehicles(vehiclesData);
         } catch (err: any) {
             console.error('Error fetching drivers:', err);
             setError(err.message || t('common.error'));
@@ -91,6 +96,7 @@ export default function DriversScreen() {
             // Clear data when backend is offline
             setDrivers([]);
             setFilteredDrivers([]);
+            setVehicles([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -424,6 +430,12 @@ export default function DriversScreen() {
                     { label: 'Email', value: selectedDriver?.driverEmail, icon: 'mail-outline', fullWidth: true },
                     { label: 'Téléphone', value: selectedDriver?.driverPhoneNumber, icon: 'call-outline' },
                     { label: 'Statut', value: selectedDriver?.driverStatus, icon: 'checkmark-circle-outline' },
+                    { label: 'Véhicule assigné', value: (() => {
+                        if (!selectedDriver?.assignedVehicleId) return 'Aucun';
+                        const v = vehicles.find(v => v.vehicleId === selectedDriver.assignedVehicleId);
+                        if (!v) return 'Introuvable';
+                        return `${v.vehicleMake} ${v.vehicleModel} (${v.vehicleRegistrationNumber})`;
+                    })(), icon: 'car-outline', fullWidth: true },
                     { label: 'N° Permis', value: selectedDriver?.driverLicenseNumber, icon: 'card-outline', fullWidth: true },
                     { label: 'Expiration Permis', value: selectedDriver?.driverLicenseExpiry ? new Date(selectedDriver.driverLicenseExpiry).toLocaleDateString() : '-', icon: 'calendar-outline' },
                     { label: 'Adresse', value: selectedDriver?.driverAddress, icon: 'location-outline', fullWidth: true },

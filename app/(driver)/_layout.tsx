@@ -63,7 +63,7 @@ export default function DriverTabLayout() {
       <Tabs.Screen
         name="vehicle"
         options={{
-          title: 'Mon Véhicule',
+          title: t('driverNav.myVehicle'),
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? 'car' : 'car-outline'} color={color} focused={focused} colors={colors} />
@@ -73,7 +73,7 @@ export default function DriverTabLayout() {
       <Tabs.Screen
         name="trips"
         options={{
-          title: 'Mes Trajets',
+          title: t('driverNav.myTrips'),
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? 'map' : 'map-outline'} color={color} focused={focused} colors={colors} />
@@ -83,7 +83,7 @@ export default function DriverTabLayout() {
       <Tabs.Screen
         name="fuel"
         options={{
-          title: 'Carburant',
+          title: t('driverNav.fuel'),
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? 'water' : 'water-outline'} color={color} focused={focused} colors={colors} />
@@ -101,13 +101,23 @@ export default function DriverTabLayout() {
         }}
       />
       
+      <Tabs.Screen
+        name="incidents"
+        options={{
+          title: t('driverNav.incidents') || 'Incidents',
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name={focused ? 'warning' : 'warning-outline'} color={color} focused={focused} colors={colors} />
+          ),
+        }}
+      />
+      
       {/* Hidden screens in the stack */}
-      <Tabs.Screen name="incidents" options={{ href: null, title: 'Incidents', headerShown: false }} />
-      <Tabs.Screen name="map" options={{ href: null, title: 'GPS', headerShown: false }} />
-      <Tabs.Screen name="notifications" options={{ href: null, title: 'Notifications', headerShown: false }} />
-      <Tabs.Screen name="statistics" options={{ href: null, title: 'Statistiques', headerShown: false }} />
-      <Tabs.Screen name="support" options={{ href: null, title: 'Assistance', headerShown: false }} />
-      <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerShown: false }} />
+      <Tabs.Screen name="map" options={{ href: null, title: t('driverNav.gps'), headerShown: false }} />
+      <Tabs.Screen name="notifications" options={{ href: null, title: t('driverNav.notifications'), headerShown: false }} />
+      <Tabs.Screen name="statistics" options={{ href: null, title: t('driverNav.statistics'), headerShown: false }} />
+      <Tabs.Screen name="support" options={{ href: null, title: t('driverNav.assistance'), headerShown: false }} />
+      <Tabs.Screen name="profile" options={{ href: null, title: t('driverNav.profile'), headerShown: false }} />
     </Tabs>
   );
 }

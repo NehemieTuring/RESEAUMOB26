@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { CreateModal, FormField } from './CreateModal';
 import { FormInput } from './FormInput';
 import { organizationApi } from '../services/authApi';
+import apiClient from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
 interface OrganizationFormModalProps {
@@ -89,18 +90,26 @@ export const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
 
         setLoading(true);
         try {
-            // 1. Update Info
-            let updatedOrg = await organizationApi.update(orgId, {
-                organizationName: orgName,
-                organizationPhone: orgPhone,
-                organizationAddress: orgAddress,
-                organizationCity: orgCity,
-            });
-
-            // 2. Upload Logo if selected
+            // Le profil societe est porte par le gestionnaire connecte :
+            // PUT /v1/fleet-managers/me/company.
+            let logoUrl: string | undefined;
             if (selectedLogoUri) {
-                updatedOrg = await organizationApi.uploadLogo(orgId, selectedLogoUri);
+                const up = await apiClient.uploadFile<{ fileUrl: string }>(
+                    '/v1/files/upload?category=logo',
+                    selectedLogoUri,
+                    'image/jpeg',
+                    'logo.jpg'
+                );
+                logoUrl = up?.fileUrl;
             }
+
+            const updatedOrg = await organizationApi.updateCompany({
+                companyName: orgName,
+                companyPhone: orgPhone,
+                companyAddress: orgAddress,
+                companyCity: orgCity,
+                companyLogoUrl: logoUrl,
+            });
 
             onSuccess(updatedOrg);
             Alert.alert(t('common.success'), 'Informations mises à jour avec succès');

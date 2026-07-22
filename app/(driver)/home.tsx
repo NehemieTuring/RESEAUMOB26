@@ -24,33 +24,77 @@ export default function DriverHomeScreen() {
   const [user, setUser] = useState<any>(null);
   const [vehicle, setVehicle] = useState<any>(null);
   const [activeTrip, setActiveTrip] = useState<any>(null);
-  const [fuelLevel, setFuelLevel] = useState<number>(75); // Mock
+  const [fuelLevel, setFuelLevel] = useState<number>(0);
   const [lastPosition, setLastPosition] = useState<any>(null);
-  const [unreadCount, setUnreadCount] = useState<number>(3); // Mock
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   
   const [inAlarm, setInAlarm] = useState(false);
 
   const loadData = async () => {
     try {
       const userStr = await AsyncStorage.getItem('user');
-      const userData = userStr ? JSON.parse(userStr) : { fullName: 'Conducteur' };
+      const userData = userStr ? JSON.parse(userStr) : null;
+      if (!userData) return;
+      
       setUser(userData);
       
-      // Mock API calls for fluid navigation as requested
-      const vehicleData = await apiClient.get<any>(`/api/drivers/${userData.userId}/vehicle`);
-      setVehicle(vehicleData.id ? vehicleData : { brand: 'Toyota', model: 'Hilux', licensePlate: 'LT-123-AB' });
-      
-      const tripsData = await apiClient.get<any[]>(`/api/trips/driver/${userData.userId}/active`);
-      setActiveTrip(tripsData && tripsData.length > 0 ? tripsData[0] : { reference: 'TRIP-A-001', status: 'IN_PROGRESS' });
-      
-      const positionsData = await apiClient.get<any[]>(`/api/positions/driver/${userData.userId}?latest=true`);
-      setLastPosition(positionsData && positionsData.length > 0 ? positionsData[0] : { lat: 4.0511, lng: 9.7085, timestamp: new Date().toISOString() });
-      
-      // Check alarm status
-      const alarmStatus = await apiClient.get<any>(`/api/drivers/${userData.userId}/alarm-status`);
-      if (alarmStatus && alarmStatus.inAlarm) {
-        setInAlarm(true);
+      const driverId = userData.id || userData.userId;
+      let currentVehicleId = userData.vehicleId;
+
+      try {
+        const freshDriver = await apiClient.get<any>('/v1/auth/me');
+        currentVehicleId = freshDriver?.vehicleId || null;
+        if (currentVehicleId !== userData.vehicleId) {
+            userData.vehicleId = currentVehicleId;
+            await AsyncStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch(e) {
+        console.warn("Impossible de rafraichir le profil du chauffeur");
       }
+
+      // Fetch Real Vehicle if assigned
+      if (currentVehicleId) {
+        try {
+          const vehicleData = await apiClient.get<any>(`/v1/vehicles/${currentVehicleId}`);
+          setVehicle(vehicleData.vehicle || vehicleData);
+          
+          // Fetch operational data for fuel
+          try {
+             const opData = await apiClient.get<any>(`/v1/vehicles/${currentVehicleId}/operational`);
+             if (opData && opData.fuelLevel) {
+                 setFuelLevel(parseInt(opData.fuelLevel) || 0);
+             }
+          } catch(e) {}
+        } catch (e) {
+          setVehicle(null);
+        }
+      } else {
+        setVehicle(null);
+      }
+      
+      // Active trip
+      try {
+        const tripsData = await apiClient.get<any[]>(`/v1/trips/driver/${driverId}/active`);
+        setActiveTrip(tripsData && tripsData.length > 0 ? tripsData[0] : null);
+      } catch(e) {
+        setActiveTrip(null);
+      }
+      
+      // Position
+      try {
+        const positionsData = await apiClient.get<any[]>(`/v1/positions/driver/${driverId}?latest=true`);
+        setLastPosition(positionsData && positionsData.length > 0 ? positionsData[0] : null);
+      } catch(e) {
+        setLastPosition(null);
+      }
+      
+      // Alarm
+      try {
+        const alarmStatus = await apiClient.get<any>(`/v1/drivers/${driverId}/alarm-status`);
+        if (alarmStatus && alarmStatus.inAlarm) {
+          setInAlarm(true);
+        }
+      } catch(e) {}
       
     } catch (error) {
       console.error('Error loading driver dashboard:', error);
@@ -120,7 +164,7 @@ export default function DriverHomeScreen() {
             <Text style={[styles.alarmText, { color: colors.textPrimary }]}>Entrée en zone interdite détectée.</Text>
             <View style={styles.alarmActions}>
               <Button title="Acquitter" onPress={() => setInAlarm(false)} size="small" variant="primary" style={{flex: 1}} />
-              <Button title="Voir Carte" onPress={() => router.push('/(driver)/map')} size="small" variant="outline" style={{flex: 1, marginLeft: 8}} />
+              <Button title="Voir Carte" onPress={() => router.push('/(driver)/map' as any)} size="small" variant="outline" style={{flex: 1, marginLeft: 8}} />
             </View>
           </View>
         )}
@@ -176,25 +220,25 @@ export default function DriverHomeScreen() {
             icon="play-circle" 
             label="Démarrer trajet" 
             color={colors.successText} 
-            onPress={() => router.push('/(driver)/trips')} 
+            onPress={() => router.push('/(driver)/trips' as any)} 
           />
           <QuickAction 
             icon="location" 
             label="Envoyer position" 
             color={colors.primaryBlue} 
-            onPress={() => router.push('/(driver)/map')} 
+            onPress={() => router.push('/(driver)/map' as any)} 
           />
           <QuickAction 
             icon="warning" 
             label="Signaler incident" 
             color={colors.errorText} 
-            onPress={() => router.push('/(driver)/incidents')} 
+            onPress={() => router.push('/(driver)/incidents' as any)} 
           />
           <QuickAction 
             icon="map" 
             label="Voir Carte" 
             color={colors.primaryCyan} 
-            onPress={() => router.push('/(driver)/map')} 
+            onPress={() => router.push('/(driver)/map' as any)} 
           />
         </View>
 

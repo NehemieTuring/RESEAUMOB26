@@ -13,15 +13,18 @@ import {
     Image,
     ActivityIndicator,
     Alert,
+    Platform,
+    DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/context/ThemeContext';
-import { DashboardHeader, FormInput, Button } from '../../src/components';
+import { DashboardHeader, FormInput, Button, ConfirmModal } from '../../src/components';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { authApi, accountApi } from '../../src/services';
 
 export default function DriverProfileScreen() {
     const router = useRouter();
@@ -29,17 +32,18 @@ export default function DriverProfileScreen() {
     const { colors, isDarkMode } = useTheme();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     
     // Mock user data for driver
     const [user, setUser] = useState<any>({
-        fullName: 'Conducteur Test',
-        email: 'driver@test.com',
-        phoneNumber: '+237 600000000',
-        licenseNumber: 'PC-12345678',
-        cardNumber: 'PRO-987654',
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+        licenseNumber: '',
+        cardNumber: '',
         status: 'ACTIVE',
-        createdAt: '2022-01-15T00:00:00Z',
-        address: 'Douala, Cameroun'
+        createdAt: null,
+        address: ''
     });
     
     const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -52,16 +56,49 @@ export default function DriverProfileScreen() {
             const userStr = await AsyncStorage.getItem('user');
             if (userStr) {
                 const sessionUser = JSON.parse(userStr);
-                // Dans la réalité, on ferait un GET /api/drivers/{id}
-                setUser(prev => ({
-                    ...prev,
-                    fullName: sessionUser.fullName || prev.fullName,
-                    email: sessionUser.email || prev.email,
-                }));
-                setFormData({
-                    phone: user.phoneNumber,
-                    address: user.address,
-                });
+                const userId = sessionUser.userUuid || sessionUser.userId;
+                
+                if (userId) {
+                    try {
+                        const profileData = await authApi.me();
+                        setUser((prev: any) => ({
+                            ...prev,
+                            fullName: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || sessionUser.fullName,
+                            email: profileData.email || sessionUser.email,
+                            phoneNumber: profileData.phone || '',
+                            licenseNumber: profileData.licenceNumber || '',
+                            status: profileData.isActive ? 'ACTIVE' : 'INACTIVE',
+                            address: profileData.companyAddress || '',
+                        }));
+                        
+                        setFormData({
+                            phone: profileData.phone || '',
+                            address: profileData.companyAddress || '',
+                        });
+                        
+                        if (profileData.photoUrl) {
+                            const path = profileData.photoUrl;
+                            const baseUrl = API_BASE_URL.replace('/api', '');
+                            const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
+                            setProfileImage(imageUrl);
+                            
+                            if (sessionUser.profilePhotoUrl !== profileData.photoUrl) {
+                                sessionUser.profilePhotoUrl = profileData.photoUrl;
+                                await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                                DeviceEventEmitter.emit('userProfileUpdated');
+                            }
+                        } else if (sessionUser.profilePhotoUrl) {
+                            setProfileImage(sessionUser.profilePhotoUrl);
+                        }
+                    } catch (e) {
+                        // Fallback session data if offline or error
+                        setUser((prev: any) => ({
+                            ...prev,
+                            fullName: sessionUser.fullName || prev.fullName,
+                            email: sessionUser.email?.includes('test.com') ? '' : (sessionUser.email || prev.email),
+                        }));
+                    }
+                }
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -77,7 +114,7 @@ export default function DriverProfileScreen() {
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission requise', 'Nous avons besoin de votre permission pour accéder à vos photos.');
+            Alert.alert(t('driverProfile.permissionRequired'), t('driverProfile.permissionMessage'));
             return;
         }
 
@@ -89,8 +126,27 @@ export default function DriverProfileScreen() {
         });
 
         if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-            Alert.alert('Succès', 'Photo de profil mise à jour');
+            try {
+                const newUri = result.assets[0].uri;
+                const fileName = newUri.split('/').pop() || 'profile.jpg';
+                const mimeType = 'image/jpeg';
+                
+                const updatedUser = await accountApi.uploadPhoto(newUri, mimeType, fileName);
+                setProfileImage(updatedUser.photoUrl || newUri);
+
+                const userStr = await AsyncStorage.getItem('user');
+                if (userStr) {
+                    const sessionUser = JSON.parse(userStr);
+                    sessionUser.profilePhotoUrl = updatedUser.photoUrl;
+                    await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                    DeviceEventEmitter.emit('userProfileUpdated');
+                }
+                
+                Alert.alert(t('common.success'), t('driverProfile.photoUpdated'));
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                Alert.alert('Erreur', 'Impossible de mettre à jour la photo de profil');
+            }
         }
     };
 
@@ -100,27 +156,32 @@ export default function DriverProfileScreen() {
             setSaving(false);
             setUser({...user, ...formData});
             setEditMode(false);
-            Alert.alert("Succès", "Vos informations ont été mises à jour.");
+            Alert.alert(t('common.success'), t('driverProfile.saveSuccess'));
         }, 1000);
     };
 
     const handleLogout = () => {
-        Alert.alert(
-            "Déconnexion",
-            "Êtes-vous sûr de vouloir vous déconnecter ?",
-            [
-                { text: "Annuler", style: "cancel" },
-                { 
-                    text: "Se déconnecter", 
-                    style: "destructive",
-                    onPress: async () => {
-                        await AsyncStorage.removeItem('user');
-                        await AsyncStorage.removeItem('userToken');
-                        router.replace('/(auth)/login');
-                    }
-                }
-            ]
-        );
+        setShowLogoutConfirm(true);
+    };
+
+    const performLogout = async () => {
+        try {
+            await authApi.logout();
+            await AsyncStorage.clear();
+            if (Platform.OS === 'web') {
+                window.location.href = '/(auth)/login';
+            } else {
+                router.replace('/(auth)/login');
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            await AsyncStorage.clear();
+            if (Platform.OS === 'web') {
+                window.location.href = '/(auth)/login';
+            } else {
+                router.replace('/(auth)/login');
+            }
+        }
     };
 
     const InfoRow = ({ label, value, icon }: { label: string; value: string; icon: string }) => (
@@ -151,7 +212,7 @@ export default function DriverProfileScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Mon Profil</Text>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('driverProfile.title')}</Text>
                 <TouchableOpacity onPress={() => setEditMode(!editMode)}>
                     <Ionicons name={editMode ? "close" : "pencil"} size={24} color={colors.primaryBlue} />
                 </TouchableOpacity>
@@ -174,41 +235,41 @@ export default function DriverProfileScreen() {
                     </TouchableOpacity>
                     <Text style={[styles.userName, { color: colors.textPrimary }]}>{user.fullName}</Text>
                     <Text style={[styles.userRole, { color: colors.primaryBlue, marginBottom: 8, marginTop: 4, textAlign: 'center', fontSize: 14, fontWeight: 'bold' }]}>
-                        CONDUCTEUR
+                        {t('driverProfile.conductor')}
                     </Text>
                     <View style={[styles.statusBadge, { backgroundColor: user.status === 'ACTIVE' ? colors.successText + '20' : colors.errorText + '20' }]}>
                         <Ionicons name="checkmark-circle" size={14} color={user.status === 'ACTIVE' ? colors.successText : colors.errorText} style={{marginRight: 4}}/>
                         <Text style={[styles.statusText, { color: user.status === 'ACTIVE' ? colors.successText : colors.errorText }]}>
-                            {user.status === 'ACTIVE' ? 'Actif' : 'Inactif'}
+                            {user.status === 'ACTIVE' ? t('driverProfile.statusActive') : t('driverProfile.statusInactive')}
                         </Text>
                     </View>
                 </View>
 
                 {editMode ? (
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>MODIFICATION DU PROFIL</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('driverProfile.editProfile')}</Text>
                         <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass, padding: 16 }]}>
                             <Text style={[styles.readOnlyWarning, { color: colors.textMuted }]}>
-                                Seuls votre téléphone et votre adresse sont modifiables. Pour le reste, contactez le gestionnaire.
+                                {t('driverProfile.editWarning')}
                             </Text>
                             <FormInput
-                                label="Téléphone"
+                                label={t('driverProfile.phone')}
                                 value={formData.phone}
                                 onChangeText={(text) => setFormData({...formData, phone: text})}
                                 placeholder="Numéro de téléphone"
                                 keyboardType="phone-pad"
                             />
                             <FormInput
-                                label="Adresse"
+                                label={t('driverProfile.address')}
                                 value={formData.address}
                                 onChangeText={(text) => setFormData({...formData, address: text})}
                                 placeholder="Votre adresse complète"
                                 multiline
                             />
                             <Button 
-                                title="Sauvegarder les modifications" 
+                                title={t('driverProfile.saveChanges')} 
                                 onPress={handleSave} 
-                                isLoading={saving}
+                                loading={saving}
                                 style={{ marginTop: 16 }}
                             />
                         </View>
@@ -216,20 +277,20 @@ export default function DriverProfileScreen() {
                 ) : (
                     <View>
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>INFORMATIONS DE CONTACT</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('driverProfile.contactInfo')}</Text>
                             <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                                <InfoRow label="Email" value={user.email} icon="mail" />
-                                <InfoRow label="Téléphone" value={user.phoneNumber} icon="call" />
-                                <InfoRow label="Adresse" value={user.address} icon="home" />
+                                <InfoRow label={t('driverProfile.email')} value={user.email} icon="mail" />
+                                <InfoRow label={t('driverProfile.phone')} value={user.phoneNumber} icon="call" />
+                                <InfoRow label={t('driverProfile.address')} value={user.address} icon="home" />
                             </View>
                         </View>
 
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>INFORMATIONS PROFESSIONNELLES</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('driverProfile.professionalInfo')}</Text>
                             <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                                <InfoRow label="Permis de conduire" value={user.licenseNumber} icon="card" />
-                                <InfoRow label="Carte professionnelle" value={user.cardNumber} icon="briefcase" />
-                                <InfoRow label="Date d'adhésion" value={new Date(user.createdAt).toLocaleDateString('fr-FR')} icon="calendar" />
+                                <InfoRow label={t('driverProfile.driverLicense')} value={user.licenseNumber} icon="card" />
+                                <InfoRow label={t('driverProfile.professionalCard')} value={user.cardNumber} icon="briefcase" />
+                                <InfoRow label={t('driverProfile.membershipDate')} value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : '-'} icon="calendar" />
                             </View>
                         </View>
                     </View>
@@ -241,12 +302,23 @@ export default function DriverProfileScreen() {
                         onPress={handleLogout}
                     >
                         <Ionicons name="log-out-outline" size={20} color={colors.errorText} style={{ marginRight: 8 }} />
-                        <Text style={[styles.logoutText, { color: colors.errorText }]}>Déconnexion</Text>
+                        <Text style={[styles.logoutText, { color: colors.errorText }]}>{t('driverProfile.logout')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            <ConfirmModal
+                visible={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={performLogout}
+                title={t('driverProfile.logout') || 'Déconnexion'}
+                message={t('driverProfile.logoutConfirm') || 'Êtes-vous sûr de vouloir vous déconnecter ?'}
+                confirmText={t('driverProfile.logoutAction') || 'Déconnexion'}
+                type="danger"
+                icon="log-out"
+            />
         </SafeAreaView>
     );
 }
@@ -271,6 +343,7 @@ const styles = StyleSheet.create({
     photoPlaceholder: { width: 120, height: 120, borderRadius: 60, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
     editBadge: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, borderWidth: 3, borderColor: '#00000000', alignItems: 'center', justifyContent: 'center' },
     userName: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
+    userRole: { fontSize: 14, fontWeight: '700' },
     statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
     statusText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
     

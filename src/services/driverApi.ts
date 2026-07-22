@@ -48,6 +48,10 @@ export interface Driver {
     driverEmergencyContactName?: string;
     driverEmergencyContactPhone?: string;
     driverPersonalInformation?: string;
+    driverAddress?: string;
+    driverDateOfBirth?: string;
+    /** Alias historique de driverLicenseExpiryDate. */
+    driverLicenseExpiry?: string;
 }
 
 export interface DriverCreate {
@@ -57,8 +61,8 @@ export interface DriverCreate {
     driverPassword: string;
     driverPhoneNumber: string;
     driverLicenseNumber: string;
-    /** Flotte de rattachement (obligatoire cote backend). */
-    fleetId: string;
+    /** Flotte de rattachement (optionnelle). */
+    fleetId?: string;
     username?: string;
 }
 
@@ -115,7 +119,7 @@ export const driverApi = {
 
     /**
      * Cree un conducteur (bouton "Nouveau conducteur").
-     * Cree le compte utilisateur ET la fiche conducteur dans la flotte indiquee.
+     * Cree le compte utilisateur ET la fiche conducteur, potentiellement sans flotte.
      */
     create: async (driver: DriverCreate): Promise<Driver> => {
         const body = {
@@ -129,8 +133,11 @@ export const driverApi = {
             lastName: driver.driverLastName,
             licenceNumber: driver.driverLicenseNumber,
         };
+        const endpoint = driver.fleetId 
+            ? `/v1/fleets/${driver.fleetId}/drivers/register` 
+            : `/v1/drivers/register`;
         return toApp(
-            await apiClient.post<BackendDriver>(`/v1/fleets/${driver.fleetId}/drivers/register`, body)
+            await apiClient.post<BackendDriver>(endpoint, body)
         );
     },
 

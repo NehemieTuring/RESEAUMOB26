@@ -52,19 +52,19 @@ export default function SettingsScreen() {
 
     const handleUpdateApp = async () => {
         if (!updateAvailable) {
-            Alert.alert("À jour", "Votre application est déjà à la dernière version.");
+            Alert.alert(t('settings.upToDate'), t('settings.upToDateMessage'));
             return;
         }
         try {
             setIsCheckingUpdate(true);
             await Updates.fetchUpdateAsync();
             Alert.alert(
-                "Mise à jour prête",
-                "L'application va maintenant redémarrer pour appliquer la mise à jour.",
+                t('settings.updateReady'),
+                t('settings.updateReadyMessage'),
                 [{ text: "OK", onPress: () => Updates.reloadAsync() }]
             );
         } catch (error) {
-            Alert.alert("Erreur", "Impossible de télécharger la mise à jour.");
+            Alert.alert(t('common.error'), t('settings.updateError'));
             console.error(error);
         } finally {
             setIsCheckingUpdate(false);
@@ -80,25 +80,25 @@ export default function SettingsScreen() {
 
     const settingsSections = [
         {
-            title: 'Preferences',
+            title: t('settings.preferences'),
             items: [
                 { id: 'theme', icon: isDarkMode ? 'moon' : 'sunny', label: isDarkMode ? t('theme.darkMode') : t('theme.lightMode'), type: 'switch', value: isDarkMode, onToggle: toggleTheme },
                 { id: 'language', icon: 'globe', label: t('language.title'), value: AVAILABLE_LANGUAGES.find(l => l.code === currentLanguage)?.name, onPress: handleLanguageChange },
             ],
         },
         {
-            title: 'About & System',
+            title: t('settings.aboutSystem'),
             items: [
                 { 
                     id: 'update', 
                     icon: 'cloud-download', 
-                    label: updateAvailable ? 'Nouvelle mise à jour (OTA)' : 'Vérifier les mises à jour', 
+                    label: updateAvailable ? t('settings.newUpdate') : t('settings.checkUpdates'), 
                     onPress: handleUpdateApp,
-                    // We can pass a custom color flag
                     isSuccess: updateAvailable,
-                    isDestructive: false
+                    isDestructive: false,
+                    isNeutral: !updateAvailable
                 },
-                { id: 'version', icon: 'information-circle', label: 'Version', value: '1.0.0' },
+                { id: 'version', icon: 'information-circle', label: t('settings.version'), value: '1.0.0' },
             ],
         },
     ];
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
                             backgroundColor: colors.surfaceCard,
                             borderColor: colors.borderGlass,
                         }]}>
-                            {section.items.map((item, itemIndex) => {
+                            {section.items.map((item: any, itemIndex: number) => {
                                 const isSwitch = 'type' in item && item.type === 'switch';
                                 const hasValue = 'value' in item && item.value !== undefined;
                                 const switchValue = isSwitch && typeof item.value === 'boolean' ? item.value : false;
@@ -158,6 +158,7 @@ export default function SettingsScreen() {
                                         <View style={[styles.iconContainer, {
                                             backgroundColor: item.isDestructive ? colors.errorBg + '40' : 
                                                            item.isSuccess ? '#10b98120' : 
+                                                           item.isNeutral ? colors.textMuted + '20' :
                                                            colors.primaryBlue + '20'
                                         }]}>
                                             <Ionicons
@@ -165,6 +166,7 @@ export default function SettingsScreen() {
                                                 size={20}
                                                 color={item.isDestructive ? colors.errorText : 
                                                        item.isSuccess ? '#10b981' : 
+                                                       item.isNeutral ? colors.textMuted :
                                                        colors.primaryBlue}
                                             />
                                         </View>
@@ -172,6 +174,7 @@ export default function SettingsScreen() {
                                             styles.settingLabel,
                                             { color: item.isDestructive ? colors.errorText : 
                                                      item.isSuccess ? '#10b981' : 
+                                                     item.isNeutral ? colors.textSecondary :
                                                      colors.textPrimary }
                                         ]}>
                                             {item.label}

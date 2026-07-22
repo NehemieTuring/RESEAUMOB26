@@ -7,7 +7,7 @@
 export { default as apiClient, API_BASE_URL } from './api';
 
 // Authentication & Admin
-export { authApi, adminApi, organizationApi } from './authApi';
+export { authApi, adminApi, organizationApi, accountApi } from './authApi';
 
 // Fleet Management
 export { vehicleApi } from './vehicleApi';

@@ -61,6 +61,8 @@ export default function RegisterScreen() {
     
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [formSuccess, setFormSuccess] = useState(false);
 
     const handlePickDocument = async () => {
         try {
@@ -97,25 +99,27 @@ export default function RegisterScreen() {
     };
 
     const handleSubmit = async () => {
+        setFormError(null);
+
         if (!acceptTerms) {
-            Alert.alert("Erreur", "Vous devez accepter les CGU et la politique de confidentialité.");
+            setFormError("Vous devez accepter les CGU et la politique de confidentialité.");
             return;
         }
         
         if (!firstName || !lastName || !companyName || !email || !phone || !password || !confirmPassword) {
-            Alert.alert("Erreur", "Veuillez remplir tous les champs obligatoires.");
+            setFormError("Veuillez remplir tous les champs obligatoires.");
             return;
         }
 
         // Retirer le + pour compter uniquement les chiffres si jamais il y a le préfixe
         const phoneDigits = phone.replace(/[^0-9]/g, '');
         if (phoneDigits.length !== 9) {
-            Alert.alert("Erreur", "Le numéro de téléphone doit contenir exactement 9 chiffres.");
+            setFormError("Le numéro de téléphone doit contenir exactement 9 chiffres.");
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert("Erreur", "Les mots de passe ne correspondent pas.");
+            setFormError("Les mots de passe ne correspondent pas.");
             return;
         }
 
@@ -138,7 +142,11 @@ export default function RegisterScreen() {
 
             // 2. Prepare payload
             const payload = {
-                username: `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, ""),
+                // Suffixe court derive de l'email pour garantir l'unicite du username
+                // (le backend impose une contrainte unique ; deux "prenom.nom" identiques
+                //  provoquaient sinon une erreur d'integrite 400).
+                username: `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, "")
+                    + "." + email.trim().toLowerCase().split("@")[0].slice(0, 6),
                 password,
                 email,
                 phone: phoneDigits,
@@ -152,14 +160,22 @@ export default function RegisterScreen() {
             await authApi.registerManager(payload);
 
             setLoading(false);
-            Alert.alert(
-                "Demande soumise",
-                "Votre demande de création de compte a été soumise avec succès. Vous recevrez un email de confirmation.",
-                [{ text: "OK", onPress: () => router.replace('/(auth)/login') }]
-            );
+            
+            // Réinitialiser le formulaire
+            setFirstName('');
+            setLastName('');
+            setCompanyName('');
+            setEmail('');
+            setPhone('');
+            setPassword('');
+            setConfirmPassword('');
+            setDocumentsList([]);
+            setAcceptTerms(false);
+
+            setFormSuccess(true);
         } catch (e: any) {
             setLoading(false);
-            Alert.alert("Erreur", e.message || "Une erreur est survenue");
+            setFormError(e.message || "Une erreur est survenue");
         }
     };
 
@@ -200,210 +216,244 @@ export default function RegisterScreen() {
                         </Text>
                     </View>
 
-                    {/* Main Card */}
-                    <View style={[
-                        styles.formCard,
-                        {
-                            backgroundColor: isDarkMode ? colors.surfaceCard : 'rgba(225, 228, 232, 0.95)',
-                            borderColor: colors.borderGlass,
-                        }
-                    ]}>
-                        <Text style={[styles.formTitle, { color: colors.textPrimary }]}>Rejoignez FleetMan</Text>
-                        <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>Créez votre compte gestionnaire de flotte</Text>
-
-                        {/* Name Row */}
-                        <View style={styles.row}>
-                            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                                <Text style={[styles.label, { color: colors.textPrimary }]}>Prénom *</Text>
-                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} value={firstName} onChangeText={setFirstName} />
-                                </View>
+                    {formSuccess ? (
+                        <View style={[
+                            styles.formCard,
+                            {
+                                backgroundColor: isDarkMode ? colors.surfaceCard : 'rgba(225, 228, 232, 0.95)',
+                                borderColor: colors.borderGlass,
+                                alignItems: 'center',
+                                paddingVertical: 40
+                            }
+                        ]}>
+                            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                                <Ionicons name="checkmark-circle" size={50} color="#22c55e" />
                             </View>
-                            <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={[styles.label, { color: colors.textPrimary }]}>Nom *</Text>
-                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} value={lastName} onChangeText={setLastName} />
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Company Name */}
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Nom entreprise *</Text>
-                            <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Transport Express CM" placeholderTextColor={colors.textMuted} value={companyName} onChangeText={setCompanyName} />
-                            </View>
-                        </View>
-
-                        {/* Email */}
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Email *</Text>
-                            <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="root" placeholderTextColor={colors.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-                            </View>
-                        </View>
-
-                        {/* Phone */}
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Téléphone *</Text>
-                            <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="6XX XX XX XX" placeholderTextColor={colors.textMuted} value={phone} onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))} keyboardType="phone-pad" maxLength={9} />
-                            </View>
-                        </View>
-
-                        {/* Password */}
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Mot de passe *</Text>
-                            <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="••••" placeholderTextColor={colors.textMuted} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.textMuted} />
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.passwordRules}>
-                                <Text style={styles.ruleText}>× 8 caractères minimum</Text>
-                                <Text style={styles.ruleText}>× Une majuscule</Text>
-                                <Text style={styles.ruleText}>× Un chiffre</Text>
-                            </View>
-                        </View>
-
-                        {/* Confirm Password */}
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Confirmer le mot de passe *</Text>
-                            <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                <TextInput style={[styles.input, { color: colors.textPrimary }]} secureTextEntry={!showConfirmPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
-                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                    <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color={colors.textMuted} />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {/* Documents Section */}
-                        <View style={styles.documentsSection}>
-                            <View style={styles.docHeader}>
-                                <Ionicons name="document-text-outline" size={20} color={colors.textPrimary} />
-                                <Text style={[styles.docTitle, { color: colors.textPrimary }]}>Documents de conformité</Text>
-                            </View>
-                            <Text style={[styles.docSubtitle, { color: colors.textSecondary }]}>
-                                Fournissez jusqu'à 10 documents (CNI et casier judiciaire obligatoires).
+                            <Text style={[styles.formTitle, { color: colors.textPrimary, textAlign: 'center' }]}>Félicitations !</Text>
+                            <Text style={[styles.formSubtitle, { color: colors.textSecondary, textAlign: 'center', marginBottom: 30, paddingHorizontal: 10 }]}>
+                                Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter en tant qu'Administrateur de votre flotte.
                             </Text>
                             
-                            <View style={styles.row}>
-                                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Type de document</Text>
-                                    <TouchableOpacity 
-                                        style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff', borderColor: colors.borderGlass, paddingVertical: 12 }]}
-                                        onPress={() => setShowDocTypePicker(true)}
-                                    >
-                                        <Text style={{ flex: 1, color: colors.textPrimary }}>{docType}</Text>
-                                        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={[styles.inputGroup, { flex: 1 }]}>
-                                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>N° document</Text>
-                                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                        <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Référence" placeholderTextColor={colors.textMuted} value={docNumber} onChangeText={setDocNumber} />
-                                    </View>
-                                </View>
-                            </View>
-
-                            <View style={styles.row}>
-                                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Émetteur</Text>
-                                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
-                                        <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Organisme" placeholderTextColor={colors.textMuted} value={docIssuer} onChangeText={setDocIssuer} />
-                                    </View>
-                                </View>
-                                <View style={[styles.inputGroup, { flex: 1 }]}>
-                                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Fichier (PDF, JPEG, PNG)</Text>
-                                    <TouchableOpacity style={[styles.fileButton, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff' }]} onPress={handlePickDocument}>
-                                        <Text style={[styles.fileButtonText, { color: colors.textPrimary }]} numberOfLines={1}>
-                                            {document ? document.name : 'Choisir un fichier...'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-
-                            <TouchableOpacity style={styles.addDocButton} onPress={handleAddDocument}>
-                                <Ionicons name="add-circle-outline" size={18} color={colors.textPrimary} />
-                                <Text style={[styles.addDocButtonText, { color: colors.textPrimary }]}>Ajouter le document ({documentsList.length}/10)</Text>
-                            </TouchableOpacity>
-
-                            {documentsList.length > 0 && (
-                                <View style={{ marginTop: 16, gap: 8 }}>
-                                    {documentsList.map((doc, idx) => (
-                                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.borderGlass }}>
-                                            <View style={{ flex: 1, marginRight: 8 }}>
-                                                <Text style={{ color: colors.textPrimary, fontWeight: '500', fontSize: 13 }} numberOfLines={1}>{doc.docType}</Text>
-                                                <Text style={{ color: colors.textMuted, fontSize: 12 }} numberOfLines={1}>{doc.file.name}</Text>
-                                            </View>
-                                            <TouchableOpacity onPress={() => setDocumentsList(prev => prev.filter((_, i) => i !== idx))} style={{ padding: 4 }}>
-                                                <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-
-                        {/* Document Type Picker Modal */}
-                        <Modal visible={showDocTypePicker} transparent={true} animationType="fade">
-                            <TouchableOpacity 
-                                style={styles.modalOverlay} 
-                                activeOpacity={1} 
-                                onPress={() => setShowDocTypePicker(false)}
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                style={[styles.submitButton, { backgroundColor: '#3b82f6', width: '100%' }]}
+                                onPress={() => router.replace('/(auth)/login')}
                             >
-                                <View style={[styles.modalContent, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff' }]}>
-                                    {docTypeOptions.map((option, index) => (
+                                <Text style={styles.submitButtonText}>Aller à la page de connexion</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={[
+                            styles.formCard,
+                            {
+                                backgroundColor: isDarkMode ? colors.surfaceCard : 'rgba(225, 228, 232, 0.95)',
+                                borderColor: colors.borderGlass,
+                            }
+                        ]}>
+                            <Text style={[styles.formTitle, { color: colors.textPrimary }]}>Rejoignez FleetMan</Text>
+                            <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>Créez votre compte gestionnaire de flotte</Text>
+
+                            {/* Name Row */}
+                            <View style={styles.row}>
+                                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                                    <Text style={[styles.label, { color: colors.textPrimary }]}>Prénom *</Text>
+                                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                        <TextInput style={[styles.input, { color: colors.textPrimary }]} value={firstName} onChangeText={setFirstName} />
+                                    </View>
+                                </View>
+                                <View style={[styles.inputGroup, { flex: 1 }]}>
+                                    <Text style={[styles.label, { color: colors.textPrimary }]}>Nom *</Text>
+                                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                        <TextInput style={[styles.input, { color: colors.textPrimary }]} value={lastName} onChangeText={setLastName} />
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Company Name */}
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Nom entreprise *</Text>
+                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Transport Express CM" placeholderTextColor={colors.textMuted} value={companyName} onChangeText={setCompanyName} />
+                                </View>
+                            </View>
+
+                            {/* Email */}
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Email *</Text>
+                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="root" placeholderTextColor={colors.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                                </View>
+                            </View>
+
+                            {/* Phone */}
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Téléphone *</Text>
+                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="6XX XX XX XX" placeholderTextColor={colors.textMuted} value={phone} onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))} keyboardType="phone-pad" maxLength={9} />
+                                </View>
+                            </View>
+
+                            {/* Password */}
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Mot de passe *</Text>
+                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="••••" placeholderTextColor={colors.textMuted} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                        <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.textMuted} />
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={styles.passwordRules}>
+                                    <Text style={styles.ruleText}>× 8 caractères minimum</Text>
+                                    <Text style={styles.ruleText}>× Une majuscule</Text>
+                                    <Text style={styles.ruleText}>× Un chiffre</Text>
+                                </View>
+                            </View>
+
+                            {/* Confirm Password */}
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textPrimary }]}>Confirmer le mot de passe *</Text>
+                                <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                    <TextInput style={[styles.input, { color: colors.textPrimary }]} secureTextEntry={!showConfirmPassword} value={confirmPassword} onChangeText={setConfirmPassword} />
+                                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                        <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color={colors.textMuted} />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Documents Section */}
+                            <View style={styles.documentsSection}>
+                                <View style={styles.docHeader}>
+                                    <Ionicons name="document-text-outline" size={20} color={colors.textPrimary} />
+                                    <Text style={[styles.docTitle, { color: colors.textPrimary }]}>Documents de conformité</Text>
+                                </View>
+                                <Text style={[styles.docSubtitle, { color: colors.textSecondary }]}>
+                                    Fournissez jusqu'à 10 documents (CNI et casier judiciaire obligatoires).
+                                </Text>
+                                
+                                <View style={styles.row}>
+                                    <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                                        <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Type de document</Text>
                                         <TouchableOpacity 
-                                            key={index} 
-                                            style={[styles.modalOption, index < docTypeOptions.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderGlass }]}
-                                            onPress={() => {
-                                                setDocType(option);
-                                                setShowDocTypePicker(false);
-                                            }}
+                                            style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff', borderColor: colors.borderGlass, paddingVertical: 12 }]}
+                                            onPress={() => setShowDocTypePicker(true)}
                                         >
-                                            <Text style={[styles.modalOptionText, { color: docType === option ? '#3b82f6' : colors.textPrimary, fontWeight: docType === option ? '600' : '400' }]}>
-                                                {option}
+                                            <Text style={{ flex: 1, color: colors.textPrimary }}>{docType}</Text>
+                                            <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                                        <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>N° document</Text>
+                                        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                            <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Référence" placeholderTextColor={colors.textMuted} value={docNumber} onChangeText={setDocNumber} />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <View style={styles.row}>
+                                    <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                                        <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Émetteur</Text>
+                                        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? colors.surfaceGlass : '#f0f3f5', borderColor: colors.borderGlass }]}>
+                                            <TextInput style={[styles.input, { color: colors.textPrimary }]} placeholder="Organisme" placeholderTextColor={colors.textMuted} value={docIssuer} onChangeText={setDocIssuer} />
+                                        </View>
+                                    </View>
+                                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                                        <Text style={[styles.label, { color: colors.textPrimary, fontSize: 12 }]}>Fichier (PDF, JPEG, PNG)</Text>
+                                        <TouchableOpacity style={[styles.fileButton, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff' }]} onPress={handlePickDocument}>
+                                            <Text style={[styles.fileButtonText, { color: colors.textPrimary }]} numberOfLines={1}>
+                                                {document ? document.name : 'Choisir un fichier...'}
                                             </Text>
                                         </TouchableOpacity>
-                                    ))}
+                                    </View>
                                 </View>
-                            </TouchableOpacity>
-                        </Modal>
 
-                        {/* CGU Checkbox */}
-                        <TouchableOpacity style={styles.checkboxContainer} onPress={() => setAcceptTerms(!acceptTerms)}>
-                            <View style={[styles.checkbox, acceptTerms && styles.checkboxActive, { borderColor: acceptTerms ? '#3b82f6' : colors.borderGlass, backgroundColor: acceptTerms ? '#3b82f6' : 'transparent' }]}>
-                                {acceptTerms && <Ionicons name="checkmark" size={14} color="#ffffff" />}
+                                <TouchableOpacity style={styles.addDocButton} onPress={handleAddDocument}>
+                                    <Ionicons name="add-circle-outline" size={18} color={colors.textPrimary} />
+                                    <Text style={[styles.addDocButtonText, { color: colors.textPrimary }]}>Ajouter le document ({documentsList.length}/10)</Text>
+                                </TouchableOpacity>
+
+                                {documentsList.length > 0 && (
+                                    <View style={{ marginTop: 16, gap: 8 }}>
+                                        {documentsList.map((doc, idx) => (
+                                            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.borderGlass }}>
+                                                <View style={{ flex: 1, marginRight: 8 }}>
+                                                    <Text style={{ color: colors.textPrimary, fontWeight: '500', fontSize: 13 }} numberOfLines={1}>{doc.docType}</Text>
+                                                    <Text style={{ color: colors.textMuted, fontSize: 12 }} numberOfLines={1}>{doc.file.name}</Text>
+                                                </View>
+                                                <TouchableOpacity onPress={() => setDocumentsList(prev => prev.filter((_, i) => i !== idx))} style={{ padding: 4 }}>
+                                                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
-                            <Text style={[styles.checkboxText, { color: colors.textSecondary }]}>
-                                J'accepte les CGU et la politique de confidentialité
-                            </Text>
-                        </TouchableOpacity>
 
-                        {/* Submit Button */}
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            style={[styles.submitButton, { backgroundColor: '#3b82f6', opacity: acceptTerms ? 1 : 0.6 }]}
-                            onPress={handleSubmit}
-                            disabled={loading || !acceptTerms}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color="#ffffff" />
-                            ) : (
-                                <Text style={styles.submitButtonText}>Soumettre ma demande</Text>
-                            )}
-                        </TouchableOpacity>
+                            {/* Document Type Picker Modal */}
+                            <Modal visible={showDocTypePicker} transparent={true} animationType="fade">
+                                <TouchableOpacity 
+                                    style={styles.modalOverlay} 
+                                    activeOpacity={1} 
+                                    onPress={() => setShowDocTypePicker(false)}
+                                >
+                                    <View style={[styles.modalContent, { backgroundColor: isDarkMode ? colors.surfaceCard : '#ffffff' }]}>
+                                        {docTypeOptions.map((option, index) => (
+                                            <TouchableOpacity 
+                                                key={index} 
+                                                style={[styles.modalOption, index < docTypeOptions.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderGlass }]}
+                                                onPress={() => {
+                                                    setDocType(option);
+                                                    setShowDocTypePicker(false);
+                                                }}
+                                            >
+                                                <Text style={[styles.modalOptionText, { color: docType === option ? '#3b82f6' : colors.textPrimary, fontWeight: docType === option ? '600' : '400' }]}>
+                                                    {option}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </TouchableOpacity>
+                            </Modal>
 
-                        {/* Login Link */}
-                        <View style={styles.loginContainer}>
-                            <Text style={[styles.loginText, { color: colors.textSecondary }]}>Déjà inscrit ? </Text>
-                            <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-                                <Text style={styles.loginLink}>Se connecter</Text>
+                            {/* CGU Checkbox */}
+                            <TouchableOpacity style={styles.checkboxContainer} onPress={() => setAcceptTerms(!acceptTerms)}>
+                                <View style={[styles.checkbox, acceptTerms && styles.checkboxActive, { borderColor: acceptTerms ? '#3b82f6' : colors.borderGlass, backgroundColor: acceptTerms ? '#3b82f6' : 'transparent' }]}>
+                                    {acceptTerms && <Ionicons name="checkmark" size={14} color="#ffffff" />}
+                                </View>
+                                <Text style={[styles.checkboxText, { color: colors.textSecondary }]}>
+                                    J'accepte les CGU et la politique de confidentialité
+                                </Text>
                             </TouchableOpacity>
+
+                            {formError && (
+                                <View style={{ backgroundColor: '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+                                    <Ionicons name="alert-circle" size={20} color="#ef4444" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#b91c1c', fontSize: 14, flex: 1 }}>{formError}</Text>
+                                </View>
+                            )}
+
+                            {/* Submit Button */}
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                style={[styles.submitButton, { backgroundColor: '#3b82f6', opacity: acceptTerms ? 1 : 0.6 }]}
+                                onPress={handleSubmit}
+                                disabled={loading || !acceptTerms}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#ffffff" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>Soumettre ma demande</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            {/* Login Link */}
+                            <View style={styles.loginContainer}>
+                                <Text style={[styles.loginText, { color: colors.textSecondary }]}>Déjà inscrit ? </Text>
+                                <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
+                                    <Text style={styles.loginLink}>Se connecter</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
+                    )}
 
                     {/* Footer */}
                     <Text style={styles.footerText}>

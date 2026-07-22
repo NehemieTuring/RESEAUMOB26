@@ -190,6 +190,8 @@ export default function WelcomeScreen() {
                         style={{ width: '100%' }}
                         icon={<Ionicons name="person-add-outline" size={20} color={isDarkMode ? colors.primaryBlue : colors.textPrimary} />}
                     />
+                    
+
                 </View>
                 <Text style={[styles.footer, { color: colors.textMuted }]}>
                     {t('welcome.copyright')}

@@ -16,6 +16,8 @@ export { CreateDriverModal } from './CreateDriverModal';
 export { CreateVehicleModal } from './CreateVehicleModal';
 export { CreateManagerModal } from './CreateManagerModal';
 export { CreateFleetModal } from './CreateFleetModal';
+export { AssignFleetModal } from './AssignFleetModal';
+export { AssignDriverModal } from './AssignDriverModal';
 export { PageHeader } from './PageHeader';
 export { DashboardHeader } from './DashboardHeader';
 export { ConfirmModal } from './ConfirmModal';

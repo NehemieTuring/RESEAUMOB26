@@ -14,6 +14,7 @@ import {
     ActivityIndicator,
     Alert,
     Platform,
+    DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,7 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader } from '../src/components';
-import { adminApi } from '../src/services';
+import { adminApi, authApi, accountApi } from '../src/services';
+import { API_BASE_URL } from '../src/constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Admin, GenderLabels } from '../src/types';
@@ -40,13 +42,51 @@ export default function ProfileScreen() {
             const userStr = await AsyncStorage.getItem('user');
             if (userStr) {
                 const sessionUser = JSON.parse(userStr);
-                const adminId = sessionUser.adminId || sessionUser.userId;
+                const adminId = sessionUser.userUuid || sessionUser.adminId || sessionUser.userId;
+                
+                // Pré-remplir avec les données de session (utile si l'API échoue ou en mode test)
+                setUser({
+                    adminFirstName: sessionUser.fullName,
+                    adminEmail: sessionUser.email?.includes('test.com') ? '' : sessionUser.email,
+                    adminRole: sessionUser.role || sessionUser.userType,
+                } as any);
 
                 if (adminId) {
-                    const profileData = await adminApi.getById(adminId);
-                    setUser(profileData);
-                    // In a real app, the image URL would come from the API
-                    // setProfileImage(profileData.profilePhotoUrl);
+                    try {
+                        const profileData = await authApi.me();
+                        // On map les données reçues de /me vers la structure attendue par l'UI (Admin)
+                        setUser({
+                            ...profileData,
+                            adminFirstName: profileData.firstName || sessionUser.fullName,
+                            adminLastName: profileData.lastName,
+                            adminEmail: profileData.email || (sessionUser.email?.includes('test.com') ? '' : sessionUser.email),
+                            adminPhoneNumber: profileData.phone,
+                            adminRole: profileData.roles?.[0] || sessionUser.role || sessionUser.userType,
+                            personalCity: profileData.companyCity, // ou personalCity selon ce qui est dispo
+                            personalAddress: profileData.companyAddress,
+                        } as any);
+
+                        // Setup profile image
+                        if (profileData.photoUrl) {
+                            const path = profileData.photoUrl;
+                            if (path.startsWith('http')) {
+                                setProfileImage(path);
+                            } else {
+                                // API_BASE_URL a la forme "http://host:port/api"
+                                const baseUrl = API_BASE_URL.replace('/api', '');
+                                const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
+                                setProfileImage(imageUrl);
+                            }
+                            
+                            if (sessionUser.profilePhotoUrl !== profileData.photoUrl) {
+                                sessionUser.profilePhotoUrl = profileData.photoUrl;
+                                await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                                DeviceEventEmitter.emit('userProfileUpdated');
+                            }
+                        }
+                    } catch (apiError) {
+                        console.log('Utilisation des données de session suite à erreur API:', apiError);
+                    }
                 }
             }
         } catch (error) {
@@ -76,9 +116,34 @@ export default function ProfileScreen() {
         });
 
         if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-            // Here you would typically upload the image to your backend
-            Alert.alert(t('common.success'), 'Photo de profil mise à jour');
+            try {
+                const newUri = result.assets[0].uri;
+                const fileName = newUri.split('/').pop() || 'profile.jpg';
+                const mimeType = 'image/jpeg';
+                
+                const updatedUser = await accountApi.uploadPhoto(newUri, mimeType, fileName);
+                
+                let imageUrl = updatedUser.photoUrl || newUri;
+                if (updatedUser.photoUrl && !updatedUser.photoUrl.startsWith('http')) {
+                    const baseUrl = API_BASE_URL.replace('/api', '');
+                    imageUrl = updatedUser.photoUrl.startsWith('/') ? `${baseUrl}${updatedUser.photoUrl}` : `${baseUrl}/api/v1/files/${updatedUser.photoUrl}`;
+                }
+                
+                setProfileImage(imageUrl);
+
+                const userStr = await AsyncStorage.getItem('user');
+                if (userStr) {
+                    const sessionUser = JSON.parse(userStr);
+                    sessionUser.profilePhotoUrl = updatedUser.photoUrl;
+                    await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                    DeviceEventEmitter.emit('userProfileUpdated');
+                }
+                
+                Alert.alert(t('common.success'), 'Photo de profil mise à jour');
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                Alert.alert('Erreur', 'Impossible de mettre à jour la photo de profil');
+            }
         }
     };
 
@@ -133,8 +198,12 @@ export default function ProfileScreen() {
                         {user?.adminFirstName} {user?.adminLastName}
                     </Text>
                     <Text style={[styles.userRole, { color: colors.primaryBlue }]}>
-                        {user?.adminRole === 'SUPER_ADMIN' ? 'ADMINISTRATEUR PRINCIPAL' : 
-                         user?.adminRole === 'ORGANIZATION_MANAGER' ? 'GESTIONNAIRE' : 'ADMINISTRATEUR'}
+                        {(() => {
+                            const r = (user?.adminRole || '').replace('ROLE_', '').toUpperCase();
+                            if (['SUPER_ADMIN', 'FLEET_SUPER_ADMIN'].includes(r)) return t('adminProfile.superAdmin');
+                            if (['MANAGER', 'FLEET_MANAGER', 'ORGANIZATION_MANAGER'].includes(r)) return t('adminProfile.manager');
+                            return t('adminProfile.admin');
+                        })()}
                     </Text>
                 </View>
 

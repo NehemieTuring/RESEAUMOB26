@@ -30,7 +30,7 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(1);
     const [adminId, setAdminId] = useState<number | null>(null);
-    const totalSteps = 3;
+    const totalSteps = 2;
 
     useEffect(() => {
         const getAdminId = async () => {
@@ -100,22 +100,9 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
         return Object.keys(newErrors).length === 0;
     };
 
-    const validateStep2 = (): boolean => {
-        const newErrors: Record<string, string> = {};
-        if (!formData.managerFirstName.trim()) newErrors.managerFirstName = 'Le prénom est requis';
-        if (!formData.managerLastName.trim()) newErrors.managerLastName = 'Le nom est requis';
-        if (!formData.managerEmail.trim()) newErrors.managerEmail = 'L\'email est requis';
-        if (!formData.managerPassword.trim()) newErrors.managerPassword = 'Le mot de passe est requis';
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleNext = () => {
         if (step === 1 && validateStep1()) {
             setStep(2);
-        } else if (step === 2 && validateStep2()) {
-            setStep(3);
         }
     };
 
@@ -131,39 +118,16 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
             return;
         }
 
-        if (!adminId) {
-            Alert.alert(t('common.error'), "Impossible d'identifier l'administrateur.");
-            return;
-        }
-
         setLoading(true);
         try {
-            // 1. Créer le Fleet Manager
-            const manager = await fleetManagerApi.create(adminId, {
-                managerFirstName: formData.managerFirstName,
-                managerLastName: formData.managerLastName,
-                managerEmail: formData.managerEmail,
-                managerPassword: formData.managerPassword,
-                managerPhoneNumber: formData.managerPhoneNumber || undefined,
-                gender: formData.gender,
-                managerIdCardNumber: formData.managerIdCardNumber || undefined,
-                niu: formData.niu || undefined,
-                personalAddress: formData.personalAddress || undefined,
-                personalCity: formData.personalCity || undefined,
-                personalPostalCode: formData.personalPostalCode || undefined,
-                personalCountry: formData.personalCountry || undefined,
-                taxNumber: formData.taxNumber || undefined,
-                language: formData.language,
-            });
-
-            // 2. Creer la flotte (le backend la rattache au gestionnaire connecte)
+            // Créer la flotte (le backend la rattache au gestionnaire connecte)
             await fleetApi.create({
                 fleetName: formData.name,
                 fleetDescription: formData.description || undefined,
                 fleetType: formData.fleetType,
             });
 
-            Alert.alert(t('common.success'), 'La flotte et son gestionnaire ont été créés avec succès.');
+            Alert.alert(t('common.success'), 'La flotte a été créée avec succès.');
             resetForm();
             onSuccess();
             onClose();
@@ -206,14 +170,12 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
 
     const getTitle = () => {
         if (step === 1) return 'Étape 1: Informations de la Flotte';
-        if (step === 2) return 'Étape 2: Gestionnaire de la Flotte';
-        return 'Étape 3: Confirmation';
+        return 'Étape 2: Confirmation';
     };
 
     const getSubmitText = () => {
         if (step === 1) return 'Suivant →';
-        if (step === 2) return 'Suivant →';
-        return 'Créer la Flotte et le Gestionnaire';
+        return 'Créer la Flotte';
     };
 
     const getCancelText = () => {
@@ -280,168 +242,6 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
                 {step === 2 && (
                     <>
                         <View style={[styles.stepDescription, { backgroundColor: colors.surfaceGlass }]}>
-                            <Ionicons name="person-add-outline" size={20} color={colors.primaryBlue} />
-                            <Text style={[styles.stepDescriptionText, { color: colors.textSecondary }]}>
-                                Créez le gestionnaire qui sera responsable de cette flotte
-                            </Text>
-                        </View>
-
-                        <View style={styles.formRow}>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Prénom *" required>
-                                    <FormInput
-                                        placeholder="Prénom"
-                                        value={formData.managerFirstName}
-                                        onChangeText={(text) => setFormData({ ...formData, managerFirstName: text })}
-                                        error={errors.managerFirstName}
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Nom *" required>
-                                    <FormInput
-                                        placeholder="Nom"
-                                        value={formData.managerLastName}
-                                        onChangeText={(text) => setFormData({ ...formData, managerLastName: text })}
-                                        error={errors.managerLastName}
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-
-                        <FormField label="Email *" required>
-                            <FormInput
-                                placeholder="email@exemple.com"
-                                value={formData.managerEmail}
-                                onChangeText={(text) => setFormData({ ...formData, managerEmail: text })}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                error={errors.managerEmail}
-                            />
-                        </FormField>
-
-                        <FormField label="Mot de passe *" required>
-                            <FormInput
-                                placeholder="••••••••••••"
-                                value={formData.managerPassword}
-                                onChangeText={(text) => setFormData({ ...formData, managerPassword: text })}
-                                secureTextEntry
-                                error={errors.managerPassword}
-                            />
-                        </FormField>
-
-                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Informations optionnelles</Text>
-
-                        <View style={[styles.formRow, { zIndex: 1000 }]}>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Téléphone">
-                                    <FormInput
-                                        placeholder="+237 ..."
-                                        value={formData.managerPhoneNumber}
-                                        onChangeText={(text) => setFormData({ ...formData, managerPhoneNumber: text.replace(/[^0-9+]/g, '') })}
-                                        keyboardType="phone-pad"
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Genre" zIndex={1000}>
-                                    <FormSelect
-                                        value={formData.gender}
-                                        options={GENDER_OPTIONS}
-                                        onSelect={(value) => setFormData({ ...formData, gender: value as Gender })}
-                                        zIndex={1000}
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-
-                        <View style={styles.formRow}>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Numéro de carte d'identité">
-                                    <FormInput
-                                        placeholder="N° CNI"
-                                        value={formData.managerIdCardNumber}
-                                        onChangeText={(text) => setFormData({ ...formData, managerIdCardNumber: text })}
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="NIU (Numéro Unique)">
-                                    <FormInput
-                                        placeholder="N° NIU"
-                                        value={formData.niu}
-                                        onChangeText={(text) => setFormData({ ...formData, niu: text })}
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-
-                        <FormField label="Adresse">
-                            <FormInput
-                                placeholder="Adresse complète"
-                                value={formData.personalAddress}
-                                onChangeText={(text) => setFormData({ ...formData, personalAddress: text })}
-                            />
-                        </FormField>
-
-                        <View style={styles.formRow}>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Ville">
-                                    <FormInput
-                                        placeholder="Ville"
-                                        value={formData.personalCity}
-                                        onChangeText={(text) => setFormData({ ...formData, personalCity: text })}
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Code Postal">
-                                    <FormInput
-                                        placeholder="B.P."
-                                        value={formData.personalPostalCode}
-                                        onChangeText={(text) => setFormData({ ...formData, personalPostalCode: text })}
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Pays">
-                                    <FormInput
-                                        placeholder="Cameroun"
-                                        value={formData.personalCountry}
-                                        onChangeText={(text) => setFormData({ ...formData, personalCountry: text })}
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-
-                        <View style={[styles.formRow, { zIndex: 500 }]}>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Numéro fiscal">
-                                    <FormInput
-                                        placeholder="N° Fiscal"
-                                        value={formData.taxNumber}
-                                        onChangeText={(text) => setFormData({ ...formData, taxNumber: text })}
-                                    />
-                                </FormField>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <FormField label="Langue préférée" zIndex={500}>
-                                    <FormSelect
-                                        value={formData.language}
-                                        options={LANGUAGE_OPTIONS}
-                                        onSelect={(value) => setFormData({ ...formData, language: value as Language })}
-                                        zIndex={500}
-                                        openDirection="up"
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-                    </>
-                )}
-
-                {step === 3 && (
-                    <>
-                        <View style={[styles.stepDescription, { backgroundColor: colors.surfaceGlass }]}>
                             <Ionicons name="checkmark-circle-outline" size={20} color={colors.successText} />
                             <Text style={[styles.stepDescriptionText, { color: colors.textSecondary }]}>
                                 Vérifiez les informations avant de créer
@@ -462,28 +262,12 @@ export const CreateFleetModal: React.FC<CreateFleetModalProps> = ({
                             </View>
                             <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Description:</Text>
                             <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{formData.description || 'N/A'}</Text>
-
-                            <View style={{ height: 1, backgroundColor: colors.borderGlass, marginVertical: 12 }} />
-
-                            <Text style={[styles.summarySectionTitle, { color: colors.primaryBlue }]}>
-                                <Ionicons name="person" size={16} /> Gestionnaire
-                            </Text>
-                            <View style={styles.summaryRow}>
-                                <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Prénom:</Text>
-                                <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{formData.managerFirstName}</Text>
-                                <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Nom:</Text>
-                                <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{formData.managerLastName}</Text>
-                            </View>
-                            <View style={styles.summaryRow}>
-                                <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Email:</Text>
-                                <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{formData.managerEmail}</Text>
-                            </View>
                         </View>
 
                         <View style={[styles.infoBox, { backgroundColor: colors.infoBg, borderColor: colors.infoBorder }]}>
                             <Ionicons name="information-circle" size={20} color={colors.infoText} />
                             <Text style={[styles.infoText, { color: colors.infoText }]}>
-                                En cliquant sur "Créer", vous allez créer simultanément la flotte et le compte du gestionnaire associé.
+                                En cliquant sur "Créer", vous allez créer la flotte. En tant qu'administrateur, vous en serez le gestionnaire par défaut.
                             </Text>
                         </View>
                     </>

@@ -15,6 +15,7 @@ import {
     Image,
     Alert,
     ActivityIndicator,
+    DeviceEventEmitter,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +27,15 @@ import { changeLanguage, AVAILABLE_LANGUAGES } from '../i18n';
 import { adminApi, organizationApi } from '../services/authApi';
 import { notificationApi } from '../services/notificationApi';
 import authService from '../services/auth';
+import { getApiBaseUrl } from '../constants/Config';
+
+const getFullImageUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const activeUrl = getApiBaseUrl();
+    const host = activeUrl.endsWith('/api') ? activeUrl.substring(0, activeUrl.length - 4) : activeUrl;
+    return url.startsWith('/') ? `${host}${url}` : `${host}/${url}`;
+};
 
 interface DashboardHeaderProps {
     searchQuery?: string;
@@ -108,6 +118,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             }
         };
         fetchHeaderData();
+        
+        const subscription = DeviceEventEmitter.addListener('userProfileUpdated', fetchHeaderData);
 
         // Refresh count every 60 seconds if notifications are enabled
         let interval: any;
@@ -116,6 +128,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         }
         return () => {
             if (interval) clearInterval(interval);
+            subscription.remove();
         };
     }, [notificationsEnabled]);
 
@@ -208,7 +221,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     onPress={handleProfilePress}
                 >
                     {userPhoto ? (
-                        <Image source={{ uri: userPhoto }} style={styles.orgLogo} />
+                        <Image source={{ uri: getFullImageUrl(userPhoto) || userPhoto }} style={styles.orgLogo} />
                     ) : (
                         <Text style={[styles.orgPlaceholderText, { color: colors.primaryBlue }]}>
                             {userInitials}

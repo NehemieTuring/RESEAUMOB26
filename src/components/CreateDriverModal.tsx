@@ -66,6 +66,9 @@ export const CreateDriverModal: React.FC<CreateDriverModalProps> = ({
         if (!formData.phone.trim()) {
             newErrors.phone = t('validation.phoneRequired');
         }
+        if (!formData.licenseNumber.trim()) {
+            newErrors.licenseNumber = 'Le numéro de permis est requis';
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -78,15 +81,8 @@ export const CreateDriverModal: React.FC<CreateDriverModalProps> = ({
 
         setLoading(true);
         try {
-            // Le backend rattache obligatoirement un conducteur a une flotte :
-            // on utilise la premiere flotte du gestionnaire connecte.
-            const fleets = await fleetApi.getAll();
-            if (!fleets.length) {
-                throw new Error('Aucune flotte disponible : creez d\'abord une flotte.');
-            }
-
             await driverApi.create({
-                fleetId: fleets[0].fleetId,
+                fleetId: undefined, // Create independently
                 driverFirstName: formData.firstName,
                 driverLastName: formData.lastName,
                 driverEmail: formData.email,
@@ -190,11 +186,12 @@ export const CreateDriverModal: React.FC<CreateDriverModalProps> = ({
                         error={errors.phone}
                     />
                 </FormField>
-                <FormField label={t('createDriver.licenseNumber')} halfWidth>
+                <FormField label={t('createDriver.licenseNumber')} required halfWidth>
                     <FormInput
                         placeholder={t('createDriver.licenseNumber')}
                         value={formData.licenseNumber}
                         onChangeText={(text) => setFormData({ ...formData, licenseNumber: text })}
+                        error={errors.licenseNumber}
                     />
                 </FormField>
             </FormRow>

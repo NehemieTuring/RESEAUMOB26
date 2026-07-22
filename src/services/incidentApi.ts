@@ -114,7 +114,7 @@ export const incidentApi = {
     },
 
     // Update incident status
-    updateStatus: async (incidentId: string, status: IncidentStatus): Promise<Incident> => {
+    updateStatus: async (incidentId: string | number, status: IncidentStatus): Promise<Incident> => {
         // Le backend attend PATCH /{id}/status avec le statut dans le corps.
         return apiClient.patch<Incident>(`/v1/operations/incidents/${incidentId}/status`, { status });
     },

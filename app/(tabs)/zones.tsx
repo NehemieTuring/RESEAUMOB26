@@ -23,7 +23,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { LatLng } from 'react-native-maps';
+interface LatLng {
+    latitude: number;
+    longitude: number;
+}
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/context/ThemeContext';
 import { geofenceApi, Geofence } from '../../src/services';

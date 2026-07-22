@@ -102,9 +102,6 @@ export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
         if (!formData.registrationNumber.trim()) {
             newErrors.registrationNumber = t('validation.registrationRequired');
         }
-        if (!formData.fleetId) {
-            newErrors.fleetId = t('validation.fleetRequired');
-        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -118,15 +115,15 @@ export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
         setLoading(true);
         try {
             await vehicleApi.create({
+                fleetId: formData.fleetId || undefined,
                 vehicleMake: formData.make,
                 vehicleModel: formData.model,
                 vehicleRegistrationNumber: formData.registrationNumber,
                 type: formData.vehicleType,
-                fuelLevel: parseInt(formData.fuelLevel) || 100,
+                fuelType: formData.fuelType,
                 numberOfPassengers: parseInt(formData.passengerCapacity) || 5,
                 state: formData.state,
-                fuelType: formData.fuelType,
-                fleetId: formData.fleetId,
+                fuelLevel: parseInt(formData.fuelLevel) || 100,
             });
 
             Alert.alert(t('common.success'), t('createVehicle.success'));
@@ -242,10 +239,13 @@ export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
                 </FormField>
             </FormRow>
 
-            <FormField label={t('createVehicle.fleet')} required zIndex={500}>
+            <FormField label={t('createVehicle.fleet')} zIndex={500}>
                 <FormSelect
                     value={formData.fleetId}
-                    options={fleets.map(f => ({ label: f.fleetName, value: f.fleetId.toString() }))}
+                    options={[
+                        { label: 'Aucune flotte', value: '' },
+                        ...fleets.map(f => ({ label: f.fleetName, value: f.fleetId.toString() }))
+                    ]}
                     onSelect={(value) => setFormData({ ...formData, fleetId: value })}
                     error={errors.fleetId}
                     zIndex={500}

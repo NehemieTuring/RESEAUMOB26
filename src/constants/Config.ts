@@ -6,13 +6,13 @@
 // List of possible backend IP addresses to try
 // Add your IPs here - the app will automatically use the first one that works
 const POSSIBLE_API_HOSTS = [
+    'http://localhost:8082',          // Web/localhost
+    'http://10.0.2.2:8082',           // Android Emulator (localhost)
     'https://reseaumob26.onrender.com', // Serveur de production (Render)
-    'http://localhost:9080',          // Web/localhost
-    'http://192.168.170.96:9080',    // WiFi actuel ✅
-    'http://192.168.79.96:9080',     // Ancien WiFi
-    'http://192.168.86.96:9080',     // Ancien WiFi
-    'http://172.16.3.122:9080',      // Réseau alternatif
-    'http://10.0.2.2:9080',          // Android Emulator (localhost)
+    'http://192.168.170.96:8082',    // WiFi actuel
+    'http://192.168.79.96:8082',     // Ancien WiFi
+    'http://192.168.86.96:8082',     // Ancien WiFi
+    'http://172.16.3.122:8082',      // Réseau alternatif
 ];
 
 // Current active API URL (will be updated after detection)

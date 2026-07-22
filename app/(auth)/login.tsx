@@ -81,6 +81,7 @@ export default function LoginScreen() {
                     userType: response.userType,
                     adminId: response.adminId,
                     organizationId: response.organizationId,
+                    profilePhotoUrl: response.profilePhotoUrl,
                 }));
                 await AsyncStorage.setItem('isLoggedIn', 'true');
 

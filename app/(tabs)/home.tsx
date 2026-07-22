@@ -91,17 +91,16 @@ export default function HomeScreen() {
             setBackendError(null);
 
             const currentUser = user || userData;
-            // Use adminId if available (for Admin, FleetManager, Driver we trace back to Admin)
-            const adminId = currentUser?.adminId;
-
-            // Fetch data from backend with admin filtering
+            
+            // Fetch data from backend with correct ID resolution
             let notificationFetch;
             if (currentUser) {
                 if (currentUser.userType === 'ADMIN' || currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ORGANIZATION_MANAGER') {
-                    const adminIdForNotif = currentUser.userId || currentUser.adminId;
+                    const adminIdForNotif = currentUser.userUuid || currentUser.userId || currentUser.adminId;
                     notificationFetch = adminIdForNotif ? notificationApi.getByAdmin(adminIdForNotif) : notificationApi.getAll();
                 } else if (currentUser.userType === 'FLEET_MANAGER') {
-                    notificationFetch = currentUser.userId ? notificationApi.getByFleetManager(currentUser.userId) : notificationApi.getAll();
+                    const userIdForNotif = currentUser.userUuid || currentUser.userId;
+                    notificationFetch = userIdForNotif ? notificationApi.getByFleetManager(userIdForNotif) : notificationApi.getAll();
                 } else {
                     notificationFetch = notificationApi.getAll();
                 }
@@ -109,21 +108,36 @@ export default function HomeScreen() {
                 notificationFetch = notificationApi.getAll();
             }
 
-            const [vehicles, drivers, fleets, notificationsData] = await Promise.all([
-                vehicleApi.getAll(adminId),
-                driverApi.getAll(adminId),
-                fleetApi.getAll(adminId),
+            const [vehiclesRes, fleetsRes, notifsRes] = await Promise.allSettled([
+                vehicleApi.getAll(),
+                fleetApi.getAll(),
                 notificationFetch,
             ]);
 
-            // If we reach here, backend is online
+            // If we reach here, at least the network call was attempted
             setBackendOnline(true);
             setBackendError(null);
 
-            const vehiclesData = vehicles || [];
-            const driversData = drivers || [];
-            const fleetsData = fleets || [];
-            const notificationsResult = notificationsData || [];
+            const vehiclesData = vehiclesRes.status === 'fulfilled' ? vehiclesRes.value || [] : [];
+            const fleetsData = fleetsRes.status === 'fulfilled' ? fleetsRes.value || [] : [];
+            const notificationsResult = notifsRes.status === 'fulfilled' ? notifsRes.value || [] : [];
+
+            // Filtrer les chauffeurs par flotte si l'utilisateur est un gestionnaire (contournement du backend qui renvoie tout)
+            let driversData: any[] = [];
+            try {
+                if (currentUser && currentUser.userType === 'FLEET_MANAGER') {
+                    const driversPromises = fleetsData.map((f: any) => driverApi.getAll(f.fleetId));
+                    const driversArrays = await Promise.allSettled(driversPromises);
+                    driversData = driversArrays
+                        .filter(res => res.status === 'fulfilled')
+                        .map((res: any) => res.value)
+                        .flat();
+                } else {
+                    driversData = await driverApi.getAll() || [];
+                }
+            } catch (err) {
+                console.warn('Failed to fetch drivers', err);
+            }
 
             const activeVehicles = vehiclesData.filter((v: any) => v.state === 'IN_SERVICE').length;
             const unreadNotifications = notificationsResult.filter((n: any) => !n.isRead);
@@ -222,6 +236,10 @@ export default function HomeScreen() {
         { id: 'newTrip', icon: 'navigate-outline', label: t('home.newTrip'), route: '/(tabs)/map' },
         { id: 'reports', icon: 'bar-chart-outline', label: t('home.viewReports'), route: '/(tabs)/reports' },
     ];
+
+    if (userData && (userData.userType === 'ADMIN' || userData.role === 'SUPER_ADMIN' || userData.role === 'ORGANIZATION_MANAGER')) {
+        quickActions.push({ id: 'orgProfile', icon: 'business-outline', label: t('moreMenu.orgProfile'), route: '/organization-profile' });
+    }
 
     const statsData = [
         { id: 'vehicles', icon: 'car', title: t('stats.totalVehicles'), value: stats.totalVehicles, color: colors.primaryBlue },

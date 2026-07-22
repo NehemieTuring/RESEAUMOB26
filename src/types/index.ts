@@ -69,8 +69,8 @@ export interface LoginResponse {
     userType: string;
     message: string;
     success: boolean;
-    organizationId?: number;
-    adminId?: number;
+    organizationId?: string;
+    adminId?: string;
     /** Identifiant reel de l'utilisateur cote backend (UUID). */
     userUuid?: string;
     /** Ensemble des roles renvoyes par le backend. */

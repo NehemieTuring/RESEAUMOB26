@@ -25,7 +25,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/context/ThemeContext';
-import { vehicleApi, Vehicle } from '../../src/services';
+import { vehicleApi, Vehicle, fleetApi, Fleet, driverApi, Driver } from '../../src/services';
 import {
     DashboardHeader,
     ConfirmModal,
@@ -33,8 +33,10 @@ import {
     BackendOfflineBanner,
     ResponsiveDataCard,
     ResponsivePageHeader,
+    AssignFleetModal,
+    AssignDriverModal,
 } from '../../src/components';
-import CreateVehicleModal from '../../src/components/CreateVehicleModal';
+import { CreateVehicleModal } from '../../src/components/CreateVehicleModal';
 import { UpdateVehicleModal } from '../../src/components/UpdateVehicleModal';
 import { checkBackendHealth } from '../../src/services/healthCheck';
 
@@ -55,6 +57,8 @@ export default function VehiclesScreen() {
     const params = useLocalSearchParams();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+    const [fleets, setFleets] = useState<Fleet[]>([]);
+    const [drivers, setDrivers] = useState<Driver[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState((params.search as string) || '');
@@ -62,6 +66,8 @@ export default function VehiclesScreen() {
     const [showFilterModal, setShowFilterModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showAssignDriverModal, setShowAssignDriverModal] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -79,7 +85,11 @@ export default function VehiclesScreen() {
             const user = userStr ? JSON.parse(userStr) : null;
             const adminId = user?.adminId;
 
-            const data = await vehicleApi.getAll(adminId);
+            const [data, fleetsData, driversData] = await Promise.all([
+                vehicleApi.getAll(),
+                fleetApi.getAll(),
+                driverApi.getAll()
+            ]);
 
             // If we reach here, backend is online
             setBackendOnline(true);
@@ -87,6 +97,8 @@ export default function VehiclesScreen() {
 
             setVehicles(data);
             setFilteredVehicles(data);
+            setFleets(fleetsData);
+            setDrivers(driversData);
         } catch (err: any) {
             console.error('Error fetching vehicles:', err);
             setError(err.message || t('common.error'));
@@ -142,6 +154,16 @@ export default function VehiclesScreen() {
     const handleEditVehicle = (vehicle: Vehicle) => {
         setSelectedVehicle(vehicle);
         setShowEditModal(true);
+    };
+
+    const handleAssignFleet = (vehicle: Vehicle) => {
+        setSelectedVehicle(vehicle);
+        setShowAssignModal(true);
+    };
+
+    const handleAssignDriver = (vehicle: Vehicle) => {
+        setSelectedVehicle(vehicle);
+        setShowAssignDriverModal(true);
     };
 
     const handleDeleteVehicle = (vehicle: Vehicle) => {
@@ -218,10 +240,12 @@ export default function VehiclesScreen() {
                     { label: 'Type carbu.', value: item.fuelType || '-', icon: 'flame-outline' },
                 ]}
                 actions={[
+                    (!item.fleetId ? { icon: 'link-outline', label: 'Assigner', onPress: () => handleAssignFleet(item), color: colors.accentPurple || '#8b5cf6' } : null),
+                    { icon: 'person-add-outline', label: 'Chauffeur', onPress: () => handleAssignDriver(item), color: colors.accentOrange || '#f97316' },
                     { icon: 'eye-outline', label: 'Voir', onPress: () => handleShowDetails(item), color: colors.primaryBlue },
                     { icon: 'create-outline', onPress: () => handleEditVehicle(item), color: colors.textSecondary },
                     { icon: 'trash-outline', onPress: () => handleDeleteVehicle(item), color: colors.errorBorder },
-                ]}
+                ].filter(Boolean) as any}
                 onPress={() => handleShowDetails(item)}
             />
         );
@@ -399,6 +423,38 @@ export default function VehiclesScreen() {
                 }}
             />
 
+            {/* Assign Fleet Modal */}
+            <AssignFleetModal
+                visible={showAssignModal}
+                vehicle={selectedVehicle}
+                fleets={fleets}
+                onClose={() => {
+                    setShowAssignModal(false);
+                    setSelectedVehicle(null);
+                }}
+                onSuccess={() => {
+                    setShowAssignModal(false);
+                    setSelectedVehicle(null);
+                    fetchVehicles();
+                }}
+            />
+
+            {/* Assign Driver Modal */}
+            <AssignDriverModal
+                visible={showAssignDriverModal}
+                vehicle={selectedVehicle}
+                drivers={drivers}
+                onClose={() => {
+                    setShowAssignDriverModal(false);
+                    setSelectedVehicle(null);
+                }}
+                onSuccess={() => {
+                    setShowAssignDriverModal(false);
+                    setSelectedVehicle(null);
+                    fetchVehicles();
+                }}
+            />
+
             {/* Delete Confirmation Modal */}
             <ConfirmModal
                 visible={isDeleteModalVisible}
@@ -429,6 +485,7 @@ export default function VehiclesScreen() {
                     { label: 'Modèle', value: selectedVehicle?.vehicleModel, icon: 'car-sport-outline' },
                     { label: 'Immatriculation', value: selectedVehicle?.vehicleRegistrationNumber, icon: 'card-outline' },
                     { label: 'Type', value: selectedVehicle?.type, icon: 'list-outline' },
+                    { label: 'Flotte', value: fleets.find(f => f.fleetId === selectedVehicle?.fleetId)?.fleetName || 'Aucune flotte', icon: 'business-outline', fullWidth: true },
                     { label: 'N° de Châssis (VIN)', value: selectedVehicle?.vehicleIdentificationNumber, icon: 'barcode-outline', fullWidth: true },
                     { label: 'Appareil Connecté ID', value: selectedVehicle?.vehicleDeviceIdAddress, icon: 'hardware-chip-outline', fullWidth: true },
                     { label: 'État Actuel', value: selectedVehicle?.state, icon: 'flash-outline' },

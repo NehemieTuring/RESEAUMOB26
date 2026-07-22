@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { DashboardHeader, Card, Button } from '../../src/components';
 import apiClient from '../../src/services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DriverVehicleScreen() {
   const { colors, isDarkMode } = useTheme();
@@ -22,33 +23,67 @@ export default function DriverVehicleScreen() {
 
   const loadData = async () => {
     try {
-      // Mock API calls
-      const vehicleData = await apiClient.get<any>('/api/drivers/me/vehicle');
-      setVehicle({
-        id: 1,
-        brand: 'Toyota',
-        model: 'Hilux',
-        year: 2022,
-        licensePlate: 'LT-123-AB',
-        vin: 'JT111MBJXXXXXXXXX',
-        type: 'PICKUP',
-        status: 'IN_SERVICE',
-        fuelLevel: 75,
-        speed: 45,
-        odometer: 45200,
-        engineStatus: 'OK',
-        batteryStatus: 'OK',
-        lastMaintenance: '2023-10-15',
-        photoUrl: null
-      });
+      const userStr = await AsyncStorage.getItem('user');
+      const userData = userStr ? JSON.parse(userStr) : null;
+      if (!userData) return;
 
-      const historyData = await apiClient.get<any[]>('/api/driver-vehicles/driver/me');
-      setHistory([
-        { id: 1, brand: 'Ford', model: 'Ranger', licensePlate: 'LT-999-XZ', startDate: '2023-01-10', endDate: '2023-11-20', distance: 12500 },
-        { id: 2, brand: 'Toyota', model: 'Hiace', licensePlate: 'CE-444-KL', startDate: '2022-05-15', endDate: '2022-12-30', distance: 28000 }
-      ]);
+      const driverId = userData.id || userData.userId;
+      let currentVehicleId = userData.vehicleId;
+
+      try {
+        const freshDriver = await apiClient.get<any>('/v1/auth/me');
+        currentVehicleId = freshDriver?.vehicleId || null;
+        if (currentVehicleId !== userData.vehicleId) {
+            userData.vehicleId = currentVehicleId;
+            await AsyncStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch(e) {
+        console.warn("Impossible de rafraichir le profil du chauffeur");
+      }
+
+      if (currentVehicleId) {
+        try {
+          const vehicleData = await apiClient.get<any>(`/v1/vehicles/${currentVehicleId}`);
+          const actualVehicle = vehicleData.vehicle || vehicleData;
+          const mappedVehicle = {
+              id: actualVehicle.vehicleId || actualVehicle.id,
+              brand: actualVehicle.brand || actualVehicle.vehicleMake || actualVehicle.make || 'Marque Inconnue',
+              model: actualVehicle.model || actualVehicle.vehicleModel || 'Modèle Inconnu',
+              year: actualVehicle.manufacturingYear || actualVehicle.year || 2024,
+              licensePlate: actualVehicle.licensePlate || actualVehicle.vehicleRegistrationNumber || '-',
+              vin: actualVehicle.vehicleSerialNumber || actualVehicle.vehicleIdentificationNumber || actualVehicle.vin || '-',
+              type: actualVehicle.vehicleTypeId || actualVehicle.type || 'N/A',
+              status: actualVehicle.status || actualVehicle.state || 'IN_SERVICE',
+              fuelLevel: actualVehicle.fuelLevel || 0,
+              speed: actualVehicle.speed || 0,
+              odometer: actualVehicle.odometer || 0,
+              engineStatus: 'OK',
+              batteryStatus: 'OK',
+              lastMaintenance: actualVehicle.createdAt || new Date().toISOString(),
+              photoUrl: actualVehicle.vehiclePhotoUrl || actualVehicle.photoUrl || null
+          };
+
+          try {
+             const opData = await apiClient.get<any>(`/v1/vehicles/${userData.vehicleId}/operational`);
+             if (opData) {
+                 if (opData.fuelLevel) mappedVehicle.fuelLevel = parseInt(opData.fuelLevel);
+                 if (opData.speed) mappedVehicle.speed = parseInt(opData.speed);
+                 if (opData.odometer) mappedVehicle.odometer = parseInt(opData.odometer);
+             }
+          } catch(e) {}
+
+          setVehicle(mappedVehicle);
+        } catch (error) {
+          console.error('Error fetching real vehicle:', error);
+          setVehicle(null);
+        }
+      } else {
+        setVehicle(null);
+      }
+
+      setHistory([]);
     } catch (error) {
-      console.error('Error loading vehicle data:', error);
+      console.error('Error in loadData:', error);
     }
   };
 

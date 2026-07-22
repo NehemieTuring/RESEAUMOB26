@@ -84,8 +84,11 @@ class ApiClient {
                 throw new Error(errorMessage);
             }
 
-            const data = await response.json();
-            return data as T;
+            const text = await response.text();
+            if (!text || text.trim() === '') {
+                return {} as T;
+            }
+            return JSON.parse(text) as T;
         } catch (error) {
             console.error(`[API ERROR] ${config.method} ${url}:`, error);
             throw error;

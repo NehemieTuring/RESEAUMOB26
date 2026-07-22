@@ -66,7 +66,7 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
     const { colors, isDarkMode } = useTheme();
 
     return (
-        <TouchableOpacity
+        <View
             style={[
                 styles.card,
                 {
@@ -75,8 +75,6 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
                     shadowColor: isDarkMode ? '#000' : colors.primaryBlue,
                 }
             ]}
-            onPress={onPress}
-            activeOpacity={onPress ? 0.7 : 1}
         >
             {/* Header Row */}
             <View style={styles.cardHeader}>
@@ -106,43 +104,7 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
                 </View>
             </View>
 
-            {/* Fields Grid */}
-            <View style={styles.fieldsContainer}>
-                {fields.map((field, index) => (
-                    <View key={index} style={styles.fieldItem}>
-                        <View style={styles.fieldLabelRow}>
-                            {field.icon && (
-                                <Ionicons
-                                    name={field.icon as any}
-                                    size={12}
-                                    color={colors.textMuted}
-                                    style={styles.fieldIcon}
-                                />
-                            )}
-                            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
-                                {field.label}
-                            </Text>
-                        </View>
-                        {field.badge ? (
-                            <View style={[styles.fieldBadge, { backgroundColor: field.badge.bgColor }]}>
-                                <Text style={[styles.fieldBadgeText, { color: field.badge.color }]}>
-                                    {field.badge.text}
-                                </Text>
-                            </View>
-                        ) : (
-                            <Text
-                                style={[
-                                    styles.fieldValue,
-                                    { color: field.highlight ? colors.primaryBlue : colors.textPrimary }
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {field.value || '-'}
-                            </Text>
-                        )}
-                    </View>
-                ))}
-            </View>
+
 
             {/* Actions Row */}
             {actions && actions.length > 0 && (
@@ -170,34 +132,34 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
                     ))}
                 </View>
             )}
-        </TouchableOpacity>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 16,
+        borderRadius: 10,
         borderWidth: 1,
-        marginHorizontal: 16,
-        marginVertical: 8,
-        padding: 16,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
+        marginHorizontal: 8,
+        marginVertical: 4,
+        padding: 10,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
     },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 6,
     },
     avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        width: 40,
+        height: 40,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: 10,
     },
     headerInfo: {
         flex: 1,
@@ -209,13 +171,13 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         flex: 1,
     },
     subtitle: {
-        fontSize: 13,
-        marginTop: 2,
+        fontSize: 11,
+        marginTop: 1,
     },
     badge: {
         paddingHorizontal: 10,
@@ -231,16 +193,16 @@ const styles = StyleSheet.create({
     fieldsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
-        gap: 8,
+        marginTop: 4,
+        gap: 6,
     },
     fieldItem: {
-        width: (screenWidth - 72) / 2 - 4,
-        minWidth: 120,
-        paddingVertical: 8,
-        paddingHorizontal: 10,
-        backgroundColor: 'rgba(148, 163, 184, 0.06)',
-        borderRadius: 10,
+        width: (screenWidth - 36) / 2 - 6,
+        minWidth: 100,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        backgroundColor: 'rgba(148, 163, 184, 0.04)',
+        borderRadius: 6,
     },
     fieldLabelRow: {
         flexDirection: 'row',
@@ -251,13 +213,13 @@ const styles = StyleSheet.create({
         marginRight: 4,
     },
     fieldLabel: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '500',
         textTransform: 'uppercase',
-        letterSpacing: 0.3,
+        letterSpacing: 0.2,
     },
     fieldValue: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
     },
     fieldBadge: {
@@ -275,21 +237,21 @@ const styles = StyleSheet.create({
     actionsRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        gap: 10,
-        marginTop: 12,
-        paddingTop: 12,
+        gap: 6,
+        marginTop: 8,
+        paddingTop: 8,
         borderTopWidth: 1,
     },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 10,
-        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 4,
     },
     actionLabel: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
     },
 });

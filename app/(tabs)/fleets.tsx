@@ -79,7 +79,7 @@ export default function FleetsScreen() {
             const user = userStr ? JSON.parse(userStr) : null;
             const adminId = user?.adminId;
 
-            const data = await fleetApi.getAll(adminId);
+            const data = await fleetApi.getAll();
 
             // If we reach here, backend is online
             setBackendOnline(true);

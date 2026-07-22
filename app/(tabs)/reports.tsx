@@ -29,7 +29,7 @@ import {
     incidentApi,
     tripApi,
     vehicleApi,
-    adminApi,
+    organizationApi,
     FuelRecharge,
     Maintenance,
     Trip,
@@ -121,7 +121,7 @@ export default function ReportsScreen() {
                 maintenanceApi.getAll(adminId),
                 tripApi.getAll(adminId),
                 incidentApi.getAll(adminId),
-                vehicleApi.getAll(adminId),
+                vehicleApi.getAll(),
             ]);
 
             // If we reach here, backend is online
@@ -174,13 +174,14 @@ export default function ReportsScreen() {
 
             // Fetch organization info
             try {
-                const adminIdForOrg = user?.adminId || user?.userId;
-                if (adminIdForOrg) {
-                    const org = await adminApi.getOrganization(adminIdForOrg).catch(() => null);
-                    if (org) {
+                // Le profil societe est porte par le gestionnaire de flotte.
+                const managerId = user?.userUuid;
+                if (managerId) {
+                    const mgr = await organizationApi.getById(managerId).catch(() => null);
+                    if (mgr) {
                         setOrgInfo({
-                            name: org.organizationName,
-                            logo: org.organizationLogo || (org as any).logoUrl
+                            name: mgr.companyName,
+                            logo: mgr.companyLogoUrl || mgr.photoUrl || null,
                         });
                     }
                 }

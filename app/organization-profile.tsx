@@ -12,14 +12,18 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
+    Image,
+    DeviceEventEmitter,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader, OrganizationFormModal } from '../src/components';
-import { adminApi, organizationApi } from '../src/services';
+import { adminApi, organizationApi, authApi } from '../src/services';
+import { getApiBaseUrl } from '../src/constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Admin } from '../src/types';
 
@@ -30,6 +34,7 @@ export default function OrganizationProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<Admin | null>(null);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [orgLogo, setOrgLogo] = useState<string | null>(null);
 
     const fetchProfile = async () => {
         try {
@@ -37,11 +42,30 @@ export default function OrganizationProfileScreen() {
             const userStr = await AsyncStorage.getItem('user');
             if (userStr) {
                 const sessionUser = JSON.parse(userStr);
-                const adminId = sessionUser.adminId || sessionUser.userId;
+                const adminId = sessionUser.userUuid || sessionUser.adminId || sessionUser.userId;
 
                 if (adminId) {
-                    const profileData = await adminApi.getById(adminId);
-                    setUser(profileData);
+                    const profileData = await authApi.me();
+                    setUser({
+                        ...profileData,
+                        organizationName: profileData.companyName || "Mon Organisation",
+                        organizationId: profileData.id,
+                        adminRole: profileData.roles[0],
+                        personalCity: profileData.companyCity || '-',
+                        personalCountry: '-'
+                    } as any);
+
+                    if (profileData.companyLogoUrl) {
+                        const path = profileData.companyLogoUrl;
+                        if (path.startsWith('http')) {
+                            setOrgLogo(path);
+                        } else {
+                            const activeUrl = getApiBaseUrl();
+                            const baseUrl = activeUrl.replace('/api', '');
+                            const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
+                            setOrgLogo(imageUrl);
+                        }
+                    }
                 }
             }
         } catch (error) {
@@ -55,6 +79,53 @@ export default function OrganizationProfileScreen() {
     useEffect(() => {
         fetchProfile();
     }, []);
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission requise', 'Nous avons besoin de votre permission pour accéder à vos photos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            try {
+                const newUri = result.assets[0].uri;
+                const fileName = newUri.split('/').pop() || 'org_logo.jpg';
+                const mimeType = 'image/jpeg';
+                
+                const updatedOrg = await authApi.organization.uploadCompanyLogo(newUri, mimeType, fileName);
+                
+                let imageUrl = updatedOrg.companyLogoUrl || newUri;
+                if (updatedOrg.companyLogoUrl && !updatedOrg.companyLogoUrl.startsWith('http')) {
+                    const activeUrl = getApiBaseUrl();
+                    const baseUrl = activeUrl.replace('/api', '');
+                    imageUrl = updatedOrg.companyLogoUrl.startsWith('/') ? `${baseUrl}${updatedOrg.companyLogoUrl}` : `${baseUrl}/api/v1/files/${updatedOrg.companyLogoUrl}`;
+                }
+                
+                setOrgLogo(imageUrl);
+
+                const userStr = await AsyncStorage.getItem('user');
+                if (userStr) {
+                    const sessionUser = JSON.parse(userStr);
+                    sessionUser.companyLogoUrl = updatedOrg.companyLogoUrl;
+                    await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                    DeviceEventEmitter.emit('userProfileUpdated');
+                }
+                
+                Alert.alert(t('common.success'), 'Logo de l\'organisation mis à jour');
+            } catch (error) {
+                console.error('Error uploading org logo:', error);
+                Alert.alert('Erreur', 'Impossible de mettre à jour le logo de l\'organisation');
+            }
+        }
+    };
 
     const InfoRow = ({ label, value, icon }: { label: string; value: string | undefined; icon: string }) => (
         <View style={[styles.infoRow, { borderBottomColor: colors.borderGlass }]}>
@@ -92,9 +163,18 @@ export default function OrganizationProfileScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.logoSection}>
-                    <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                        <Ionicons name="business" size={60} color={colors.textMuted} />
-                    </View>
+                    <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
+                        {orgLogo ? (
+                            <Image source={{ uri: orgLogo }} style={[styles.logoPlaceholder, { borderWidth: 0 }]} />
+                        ) : (
+                            <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                                <Ionicons name="business" size={60} color={colors.textMuted} />
+                            </View>
+                        )}
+                        <View style={[styles.editBadge, { backgroundColor: colors.primaryCyan }]}>
+                            <Ionicons name="camera" size={16} color="#fff" />
+                        </View>
+                    </TouchableOpacity>
                     <Text style={[styles.orgName, { color: colors.textPrimary }]}>
                         {user?.organizationName}
                     </Text>
@@ -161,7 +241,22 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    photoContainer: {
+        position: 'relative',
         marginBottom: 16,
+    },
+    editBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 3,
+        borderColor: '#00000000',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     orgName: {
         fontSize: 22,

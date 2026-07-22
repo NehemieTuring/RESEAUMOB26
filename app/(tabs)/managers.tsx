@@ -436,11 +436,15 @@ const styles = StyleSheet.create({
     },
     filterScrollView: {
         flexGrow: 0,
+        flexShrink: 0,
         marginBottom: 8,
+        minHeight: 55,
+        paddingVertical: 4,
     },
     filterScrollContent: {
         paddingHorizontal: 16,
         gap: 10,
+        alignItems: 'center',
     },
     searchContainer: {
         flexDirection: 'row',

@@ -81,7 +81,7 @@ export default function MoreScreen() {
         {
             title: t('more.analytics'),
             items: [
-                notificationsEnabled ? { id: 'notifications', title: 'Notifications', icon: 'notifications', route: '/(tabs)/notifications', color: colors.warningText } : null,
+                notificationsEnabled ? { id: 'notifications', title: t('notifications.title'), icon: 'notifications', route: '/(tabs)/notifications', color: colors.warningText } : null,
                 { id: 'history', title: t('navigation.history'), icon: 'time', route: '/(tabs)/history', color: colors.primaryBlue },
                 { id: 'reports', title: t('navigation.reports'), icon: 'bar-chart', route: '/(tabs)/reports', color: colors.primaryCyan || '#22d3ee' },
             ].filter((item): item is any => item !== null),
@@ -89,8 +89,8 @@ export default function MoreScreen() {
         {
             title: t('more.account'),
             items: [
-                { id: 'profile', title: 'Mon Profil', icon: 'person', route: '/profile', color: colors.primaryBlue },
-                userRole === 'SUPER_ADMIN' ? { id: 'org_profile', title: 'Profil Organisation', icon: 'business', route: '/organization-profile', color: colors.primaryCyan } : null,
+                { id: 'profile', title: t('moreMenu.myProfile'), icon: 'person', route: '/profile', color: colors.primaryBlue },
+                (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'FLEET_ADMIN' || userRole === 'FLEET_SUPER_ADMIN' || userRole === 'FLEET_MANAGER') ? { id: 'org_profile', title: t('moreMenu.orgProfile'), icon: 'business', route: '/organization-profile', color: colors.primaryCyan } : null,
                 { id: 'subscription', title: t('navigation.subscription'), icon: 'card', route: '/(tabs)/subscription', color: colors.accentGold || '#f59e0b' },
                 { id: 'support', title: t('navigation.support'), icon: 'help-circle', route: '/(tabs)/support', color: colors.infoText },
                 { id: 'settings', title: t('navigation.settings'), icon: 'settings', route: '/(tabs)/settings', color: colors.textSecondary },

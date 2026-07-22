@@ -31,6 +31,12 @@ export interface BackendUserDetail {
     vehicleId: string | null;
     isActive: boolean;
     lastLoginAt: string | null;
+    // Champs societe (renseignes pour les gestionnaires de flotte).
+    companyPhone: string | null;
+    companyAddress: string | null;
+    companyCity: string | null;
+    companyLogoUrl: string | null;
+    organizationId: string | null;
 }
 
 export interface BackendAuthResponse {
@@ -40,24 +46,33 @@ export interface BackendAuthResponse {
 }
 
 /** Ordre de priorite si l'utilisateur cumule plusieurs roles. */
-const ROLE_PRIORITY = ['FLEET_SUPER_ADMIN', 'FLEET_ADMIN', 'FLEET_MANAGER', 'FLEET_DRIVER'];
+const ROLE_PRIORITY = [
+    'ROLE_SUPER_ADMIN', 'SUPER_ADMIN', 'FLEET_SUPER_ADMIN', 
+    'ROLE_ADMIN', 'ADMIN', 'FLEET_ADMIN', 
+    'ROLE_ORGANIZATION_MANAGER', 'ORGANIZATION_MANAGER',
+    'ROLE_FLEET_MANAGER', 'FLEET_MANAGER', 
+    'ROLE_DRIVER', 'DRIVER', 'FLEET_DRIVER'
+];
 
-export const primaryRole = (roles: string[] = []): string =>
-    ROLE_PRIORITY.find((r) => roles.includes(r)) ?? (roles[0] ?? '');
+export const primaryRole = (roles: string[] = []): string => {
+    // Nettoyer les rôles (enlever le préfixe ROLE_ si présent pour la comparaison, mais garder l'original si besoin)
+    const normalizedRoles = roles.map(r => r.toUpperCase());
+    return ROLE_PRIORITY.find((r) => normalizedRoles.includes(r)) ?? (roles[0] ?? '');
+};
 
 /** Traduit un role backend en "userType" attendu par les ecrans existants. */
 const toUserType = (role: string): string => {
-    switch (role) {
-        case 'FLEET_SUPER_ADMIN':
-        case 'FLEET_ADMIN':
-            return 'ADMIN';
-        case 'FLEET_MANAGER':
-            return 'FLEET_MANAGER';
-        case 'FLEET_DRIVER':
-            return 'DRIVER';
-        default:
-            return '';
+    const r = role.replace('ROLE_', '').toUpperCase();
+    if (['SUPER_ADMIN', 'FLEET_SUPER_ADMIN', 'ADMIN', 'FLEET_ADMIN'].includes(r)) {
+        return 'ADMIN';
     }
+    if (['FLEET_MANAGER', 'ORGANIZATION_MANAGER', 'MANAGER'].includes(r)) {
+        return 'FLEET_MANAGER';
+    }
+    if (['FLEET_DRIVER', 'DRIVER'].includes(r)) {
+        return 'DRIVER';
+    }
+    return '';
 };
 
 /** Persiste la session et arme le Bearer token du client HTTP. */
@@ -114,6 +129,9 @@ export const authApi = {
                 role,
                 userType: toUserType(role),
                 roles: res.user.roles,
+                organizationId: res.user.organizationId,
+                adminId: res.user.organizationId || res.user.id,
+                profilePhotoUrl: res.user.photoUrl,
             } as LoginResponse;
         } catch (e: any) {
             return {
@@ -249,6 +267,11 @@ export const organizationApi = {
         companyLogoUrl?: string;
     }): Promise<Organization> => {
         return apiClient.put<Organization>('/v1/fleet-managers/me/company', data);
+    },
+
+    /** Upload du logo de la societe. */
+    uploadCompanyLogo: async (fileUri: string, mimeType: string, fileName: string): Promise<Organization> => {
+        return apiClient.uploadFile<Organization>('/v1/fleet-managers/me/company/logo', fileUri, mimeType, fileName);
     },
 
     /** Liste des gestionnaires de flotte. */
