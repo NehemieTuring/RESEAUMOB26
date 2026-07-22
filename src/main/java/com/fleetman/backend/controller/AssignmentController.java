@@ -22,29 +22,29 @@ public class AssignmentController {
     }
 
     @PostMapping
-    public ResponseEntity<AssignmentEntity> create(@RequestBody AssignmentEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<AssignmentEntity> create(@RequestBody AssignmentEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping
     public ResponseEntity<List<AssignmentEntity>> list(@RequestParam(required = false) UUID scheduleId,
-                                                       @RequestParam(required = false) UUID fleetId) {
-        return ResponseEntity.ok(service.list(scheduleId, fleetId));
+                                                       @RequestParam(required = false) UUID fleetId, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.list(scheduleId, fleetId, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AssignmentEntity> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.get(id));
+    public ResponseEntity<AssignmentEntity> get(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.get(id, SecurityUtils.getUserId(auth)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AssignmentEntity> update(@PathVariable UUID id, @RequestBody AssignmentEntity req) {
-        return ResponseEntity.ok(service.update(id, req));
+    public ResponseEntity<AssignmentEntity> update(@PathVariable UUID id, @RequestBody AssignmentEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.update(id, req, SecurityUtils.getUserId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, SecurityUtils.getUserId(auth));
         return ResponseEntity.noContent().build();
     }
 }

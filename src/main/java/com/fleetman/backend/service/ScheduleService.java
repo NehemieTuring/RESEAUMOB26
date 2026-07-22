@@ -19,22 +19,27 @@ public class ScheduleService {
     }
 
     @Transactional
-    public ScheduleEntity create(ScheduleEntity schedule) {
+    public ScheduleEntity create(ScheduleEntity schedule, UUID managerId) {
         if (schedule.getStatus() == null) schedule.setStatus("DRAFT");
+        schedule.setManagerId(managerId);
         return scheduleRepository.save(schedule);
     }
 
-    public List<ScheduleEntity> list(UUID fleetId) {
-        return fleetId != null ? scheduleRepository.findByFleetId(fleetId) : scheduleRepository.findAll();
+    public List<ScheduleEntity> list(UUID fleetId, UUID managerId) {
+        List<ScheduleEntity> schedules = managerId != null ? scheduleRepository.findByManagerId(managerId) : scheduleRepository.findAll();
+        if (fleetId != null) schedules = schedules.stream().filter(s -> fleetId.equals(s.getFleetId())).toList();
+        return schedules;
     }
 
-    public ScheduleEntity get(UUID id) {
-        return scheduleRepository.findById(id).orElseThrow(() -> PlanningException.notFound(id));
+    public ScheduleEntity get(UUID id, UUID managerId) {
+        ScheduleEntity s = scheduleRepository.findById(id).orElseThrow(() -> PlanningException.notFound(id));
+        if (managerId != null) com.fleetman.backend.controller.SecurityUtils.requireOwnership(s.getManagerId(), managerId);
+        return s;
     }
 
     @Transactional
-    public ScheduleEntity update(UUID id, ScheduleEntity req) {
-        ScheduleEntity s = get(id);
+    public ScheduleEntity update(UUID id, ScheduleEntity req, UUID managerId) {
+        ScheduleEntity s = get(id, managerId);
         if (req.getTitle() != null) s.setTitle(req.getTitle());
         if (req.getStatus() != null) s.setStatus(req.getStatus());
         if (req.getNotes() != null) s.setNotes(req.getNotes());
@@ -44,7 +49,8 @@ public class ScheduleService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        scheduleRepository.deleteById(id);
+    public void delete(UUID id, UUID managerId) {
+        ScheduleEntity s = get(id, managerId);
+        scheduleRepository.delete(s);
     }
 }

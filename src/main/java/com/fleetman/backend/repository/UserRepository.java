@@ -13,6 +13,7 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     Optional<UserEntity> findByUsername(String username);
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
+    boolean existsByPhone(String phone);
     @Query("SELECT u FROM UserEntity u WHERE u.email = :id OR u.username = :id")
     Optional<UserEntity> findByEmailOrUsername(@Param("id") String identifier);
 }

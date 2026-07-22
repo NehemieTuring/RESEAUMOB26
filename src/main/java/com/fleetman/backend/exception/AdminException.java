@@ -6,4 +6,5 @@ public class AdminException extends DomainException {
     public static AdminException accessDenied() { return new AdminException("Acces refuse.", 403, "ADM_002"); }
     public static AdminException invalid(String message) { return new AdminException(message, 400, "ADM_003"); }
     public static AdminException conflict(String message) { return new AdminException(message, 409, "ADM_004"); }
+    public static AdminException forbidden(String message) { return new AdminException(message, 403, "ADM_005"); }
 }

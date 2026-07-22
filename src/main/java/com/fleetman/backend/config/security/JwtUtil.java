@@ -45,6 +45,7 @@ public class JwtUtil {
                 .claim("email", user.email())
                 .claim("firstName", user.firstName())
                 .claim("lastName", user.lastName())
+                .claim("organizationId", user.organizationId() != null ? user.organizationId().toString() : null)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ttl))
                 .signWith(key())
@@ -63,6 +64,11 @@ public class JwtUtil {
     public List<String> extractRoles(String token) {
         Object roles = parse(token).get("roles");
         return roles instanceof List ? (List<String>) roles : List.of();
+    }
+
+    public UUID extractOrganizationId(String token) {
+        Object orgId = parse(token).get("organizationId");
+        return orgId != null ? UUID.fromString(orgId.toString()) : null;
     }
 
     public boolean isValid(String token) {

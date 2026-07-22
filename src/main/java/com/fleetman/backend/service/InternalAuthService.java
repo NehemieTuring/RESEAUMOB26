@@ -63,8 +63,19 @@ public class InternalAuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest cmd) {
+        return registerWithOrg(cmd, UUID.randomUUID());
+    }
+
+    @Transactional
+    public AuthResponse registerWithOrg(RegisterRequest cmd, UUID organizationId) {
         if (cmd.email() != null && userRepository.existsByEmail(cmd.email())) {
             throw AuthException.emailAlreadyUsed();
+        }
+        if (cmd.username() != null && userRepository.existsByUsername(cmd.username())) {
+            throw new IllegalArgumentException("Ce nom d'utilisateur est déjà pris.");
+        }
+        if (cmd.phone() != null && userRepository.existsByPhone(cmd.phone())) {
+            throw new IllegalArgumentException("Ce numéro de téléphone est déjà pris.");
         }
         UserEntity user = UserEntity.builder()
                 .username(cmd.username())
@@ -72,6 +83,7 @@ public class InternalAuthService {
                 .phone(cmd.phone())
                 .firstName(cmd.firstName())
                 .lastName(cmd.lastName())
+                .organizationId(organizationId)
                 .passwordHash(passwordEncoder.encode(
                         cmd.password() != null ? cmd.password() : UUID.randomUUID().toString()))
                 .isActive(true)
@@ -86,14 +98,6 @@ public class InternalAuthService {
             if (!fleetManagerRepository.existsById(user.getId())) {
                 fleetManagerRepository.save(FleetManagerEntity.builder()
                         .userId(user.getId())
-                        .build());
-            }
-        }
-        if (roles.contains("FLEET_DRIVER")) {
-            if (!driverRepository.existsById(user.getId())) {
-                driverRepository.save(DriverEntity.builder()
-                        .userId(user.getId())
-                        .status("ACTIVE")
                         .build());
             }
         }
@@ -126,17 +130,19 @@ public class InternalAuthService {
         return loadUserDetail(userId);
     }
 
-    public List<UserDetail> getUsersByService(String serviceName) {
+    public List<UserDetail> getUsersByService(String serviceName, UUID organizationId) {
         if ("DRIVERS".equalsIgnoreCase(serviceName)) {
             return driverRepository.findAll().stream()
                     .map(d -> loadUserDetail(d.getUserId()))
                     .filter(Objects::nonNull)
+                    .filter(u -> organizationId == null || organizationId.equals(u.organizationId()))
                     .collect(Collectors.toList());
         }
         // FLEET_MANAGEMENT par defaut -> managers
         return fleetManagerRepository.findAll().stream()
                 .map(m -> loadUserDetail(m.getUserId()))
                 .filter(Objects::nonNull)
+                .filter(u -> organizationId == null || organizationId.equals(u.organizationId()))
                 .collect(Collectors.toList());
     }
 
@@ -250,7 +256,8 @@ public class InternalAuthService {
                 user.getFirstName(), user.getLastName(), service, roles, permissions,
                 user.getPhotoUrl(), companyName, licenceNumber, vehicleId,
                 user.isActive(), user.getLastLoginAt(),
-                companyPhone, companyAddress, companyCity, companyLogoUrl);
+                companyPhone, companyAddress, companyCity, companyLogoUrl,
+                user.getOrganizationId());
     }
 
     private List<String> derivePermissions(List<String> roles) {

@@ -22,23 +22,23 @@ public class FuelRechargeController {
     }
 
     @PostMapping
-    public ResponseEntity<FuelRechargeEntity> create(@RequestBody FuelRechargeEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<FuelRechargeEntity> create(@RequestBody FuelRechargeEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping
-    public ResponseEntity<List<FuelRechargeEntity>> list(@RequestParam(required = false) UUID vehicleId) {
-        return ResponseEntity.ok(service.list(vehicleId));
+    public ResponseEntity<List<FuelRechargeEntity>> list(@RequestParam(required = false) UUID vehicleId, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.list(vehicleId, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FuelRechargeEntity> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.get(id));
+    public ResponseEntity<FuelRechargeEntity> get(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.get(id, SecurityUtils.getUserId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, SecurityUtils.getUserId(auth));
         return ResponseEntity.noContent().build();
     }
 }

@@ -40,6 +40,9 @@ public class IncidentEntity {
     @Column(name = "vehicle_id")
     private UUID vehicleId;
 
+    @Column(name = "manager_id")
+    private UUID managerId;
+
     @Column(name = "vehicle_registration", length = 50)
     private String vehicleRegistration;
 

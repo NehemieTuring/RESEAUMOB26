@@ -23,34 +23,34 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public ResponseEntity<ExpenseEntity> create(@RequestBody ExpenseEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<ExpenseEntity> create(@RequestBody ExpenseEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, com.fleetman.backend.controller.SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping
     public ResponseEntity<List<ExpenseEntity>> list(@RequestParam(required = false) UUID fleetId,
-                                                    @RequestParam(required = false) UUID managerId) {
-        return ResponseEntity.ok(service.list(fleetId, managerId));
+                                                    org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.list(fleetId, com.fleetman.backend.controller.SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExpenseEntity> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.get(id));
+    public ResponseEntity<ExpenseEntity> get(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.get(id, com.fleetman.backend.controller.SecurityUtils.getUserId(auth)));
     }
 
     @PostMapping("/{id}/approve")
-    public ResponseEntity<ExpenseEntity> approve(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.approve(id));
+    public ResponseEntity<ExpenseEntity> approve(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.approve(id, com.fleetman.backend.controller.SecurityUtils.getUserId(auth)));
     }
 
     @PostMapping("/{id}/reject")
-    public ResponseEntity<ExpenseEntity> reject(@PathVariable UUID id, @RequestBody CancelTripRequest req) {
-        return ResponseEntity.ok(service.reject(id, req.reason()));
+    public ResponseEntity<ExpenseEntity> reject(@PathVariable UUID id, @RequestBody CancelTripRequest req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.reject(id, req.reason(), com.fleetman.backend.controller.SecurityUtils.getUserId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, com.fleetman.backend.controller.SecurityUtils.getUserId(auth));
         return ResponseEntity.noContent().build();
     }
 }

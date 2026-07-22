@@ -28,21 +28,37 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserDetail> listManagers() {
-        return authService.getUsersByService("FLEET_MANAGEMENT");
+    public List<UserDetail> listManagers(UUID orgId) {
+        return authService.getUsersByService("FLEET_MANAGEMENT", orgId);
     }
 
     @Transactional
-    public UserDetail setActive(UUID userId, boolean active) {
+    public UserDetail setActive(UUID userId, boolean active, UUID orgId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> AdminException.notFound(userId));
+        if (orgId != null && !orgId.equals(user.getOrganizationId())) {
+            throw AdminException.forbidden("Organization mismatch");
+        }
         user.setActive(active);
         userRepository.save(user);
         return authService.loadUserDetail(userId);
     }
 
     @Transactional
-    public void deleteUser(UUID userId) {
+    public void deleteUser(UUID userId, UUID orgId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> AdminException.notFound(userId));
+        if (orgId != null && !orgId.equals(user.getOrganizationId())) {
+            throw AdminException.forbidden("Organization mismatch");
+        }
         authService.deleteAccount(userId);
+    }
+
+    @Transactional
+    public UserDetail createManager(com.fleetman.backend.controller.dto.RegisterRequest cmd, UUID organizationId) {
+        // We use authService to create the user, roles, and entities, but we override the default behavior
+        // to assign the correct organizationId.
+        com.fleetman.backend.controller.dto.AuthResponse res = authService.registerWithOrg(cmd, organizationId);
+        return res.user();
     }
 }

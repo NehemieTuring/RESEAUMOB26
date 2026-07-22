@@ -33,8 +33,9 @@ public class MaintenanceService {
     }
 
     @Transactional
-    public MaintenanceEntity create(MaintenanceEntity maintenance) {
+    public MaintenanceEntity create(MaintenanceEntity maintenance, UUID managerId) {
         if (maintenance.getDateTime() == null) maintenance.setDateTime(Instant.now());
+        maintenance.setManagerId(managerId);
         MaintenanceEntity saved = maintenanceRepository.save(maintenance);
 
         VehicleEntity vehicle = maintenance.getVehicleId() != null
@@ -67,19 +68,27 @@ public class MaintenanceService {
         return saved;
     }
 
-    public List<MaintenanceEntity> list(UUID vehicleId) {
-        return vehicleId != null
-                ? maintenanceRepository.findByVehicleIdAndDeletedFalse(vehicleId)
+    public List<MaintenanceEntity> list(UUID vehicleId, UUID managerId) {
+        List<MaintenanceEntity> list = managerId != null
+                ? maintenanceRepository.findByManagerIdAndDeletedFalse(managerId)
                 : maintenanceRepository.findByDeletedFalse();
+        if (vehicleId != null) {
+            return list.stream().filter(m -> vehicleId.equals(m.getVehicleId())).toList();
+        }
+        return list;
     }
 
-    public MaintenanceEntity get(UUID id) {
-        return maintenanceRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+    public MaintenanceEntity get(UUID id, UUID managerId) {
+        MaintenanceEntity m = maintenanceRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+        if (managerId != null) {
+            com.fleetman.backend.controller.SecurityUtils.requireOwnership(m.getManagerId(), managerId);
+        }
+        return m;
     }
 
     @Transactional
-    public MaintenanceEntity update(UUID id, MaintenanceEntity req) {
-        MaintenanceEntity m = get(id);
+    public MaintenanceEntity update(UUID id, MaintenanceEntity req, UUID managerId) {
+        MaintenanceEntity m = get(id, managerId);
         if (req.getSubject() != null) m.setSubject(req.getSubject());
         if (req.getCost() != null) m.setCost(req.getCost());
         if (req.getReport() != null) m.setReport(req.getReport());
@@ -88,8 +97,8 @@ public class MaintenanceService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        MaintenanceEntity m = get(id);
+    public void delete(UUID id, UUID managerId) {
+        MaintenanceEntity m = get(id, managerId);
         m.setDeleted(true);
         m.setDeletedAt(Instant.now());
         maintenanceRepository.save(m);

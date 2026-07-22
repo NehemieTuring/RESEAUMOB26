@@ -25,6 +25,9 @@ public class AssignmentEntity {
     @Column(name = "fleet_id")
     private UUID fleetId;
 
+    @Column(name = "manager_id")
+    private UUID managerId;
+
     @Column(name = "vehicle_id")
     private UUID vehicleId;
 

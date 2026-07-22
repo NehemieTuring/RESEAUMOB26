@@ -2,7 +2,7 @@ package com.fleetman.backend.controller.dto;
 
 import java.util.UUID;
 
-public record VehicleRequest(UUID vehicleTypeId, String licensePlate, UUID brandId, UUID modelId,
-                             Integer manufacturingYear, UUID fuelTypeId, UUID transmissionTypeId,
+public record VehicleRequest(String vehicleType, String licensePlate, String brand, String model,
+                             Integer manufacturingYear, String fuelType, String transmissionType,
                              Double tankCapacity, Integer totalSeatNumber, Double averageFuelConsumption,
-                             UUID colorId, UUID sizeId, UUID usageTypeId) {}
+                             String color, String size, String usageType, UUID fleetId) {}

@@ -21,23 +21,27 @@ public class TripService {
     private final VehicleRepository vehicleRepository;
     private final DriverRepository driverRepository;
     private final OperationalParameterRepository operationalRepository;
+    private final UserRepository userRepository;
 
     public TripService(TripRepository tripRepository,
                        TripDetailRepository tripDetailRepository,
                        VehicleRepository vehicleRepository,
                        DriverRepository driverRepository,
-                       OperationalParameterRepository operationalRepository) {
+                       OperationalParameterRepository operationalRepository,
+                       UserRepository userRepository) {
         this.tripRepository = tripRepository;
         this.tripDetailRepository = tripDetailRepository;
         this.vehicleRepository = vehicleRepository;
         this.driverRepository = driverRepository;
         this.operationalRepository = operationalRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
     public TripEntity createTrip(CreateTripRequest req, UUID createdBy) {
         VehicleEntity vehicle = vehicleRepository.findById(req.vehicleId())
                 .orElseThrow(() -> VehicleException.notFound(req.vehicleId()));
+        com.fleetman.backend.controller.SecurityUtils.requireOwnership(vehicle.getManagerId(), createdBy);
         if (!"AVAILABLE".equals(vehicle.getStatus())) {
             throw VehicleException.notAvailable();
         }
@@ -88,12 +92,38 @@ public class TripService {
         return prefix + String.format("%04d", seq);
     }
 
-    public List<TripEntity> list(UUID fleetId) {
-        return fleetId != null ? tripRepository.findByFleetId(fleetId) : tripRepository.findAll();
+    public List<TripEntity> list(UUID fleetId, UUID userId, boolean isAdmin, UUID orgId) {
+        if (fleetId != null) {
+            return tripRepository.findByFleetId(fleetId).stream()
+                    .filter(t -> userId == null || isAdmin || userId.equals(t.getCreatedBy()))
+                    .toList();
+        }
+        return isAdmin ? tripRepository.findAllByOrganizationId(orgId)
+                : (userId != null ? tripRepository.findAllByManagerId(userId) : tripRepository.findAll());
     }
 
-    public TripEntity get(UUID id) {
-        return tripRepository.findById(id).orElseThrow(() -> TripException.notFound(id));
+    public TripEntity get(UUID id, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
+        TripEntity t = tripRepository.findById(id).orElseThrow(() -> TripException.notFound(id));
+        if (userId != null) {
+            if (isDriver) {
+                if (!userId.equals(t.getDriverId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("Ce trajet n'est pas le vôtre.");
+                }
+            } else {
+                if (userId.equals(t.getCreatedBy())) return t;
+                boolean ownsVehicle = vehicleRepository.findById(t.getVehicleId())
+                        .map(v -> userId.equals(v.getManagerId())).orElse(false);
+                if (ownsVehicle) return t;
+
+                if (isAdmin && orgId != null) {
+                    boolean sameOrg = userRepository.findById(t.getCreatedBy())
+                            .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+                    if (sameOrg) return t;
+                }
+                throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a ce trajet.");
+            }
+        }
+        return t;
     }
 
     public TripEntity getByCode(String code) {
@@ -101,8 +131,8 @@ public class TripService {
     }
 
     @Transactional
-    public TripEntity startTrip(UUID tripId, StartTripRequest req) {
-        TripEntity trip = get(tripId);
+    public TripEntity startTrip(UUID tripId, StartTripRequest req, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, userId, isDriver, isAdmin, orgId);
         requireStatus(trip, "SCHEDULED");
         trip.setStatus("DEPARTED");
         trip.setDepartureKmIndex(req.departureKmIndex());
@@ -112,16 +142,16 @@ public class TripService {
     }
 
     @Transactional
-    public TripEntity returningTrip(UUID tripId) {
-        TripEntity trip = get(tripId);
+    public TripEntity returningTrip(UUID tripId, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, userId, isDriver, isAdmin, orgId);
         requireStatus(trip, "DEPARTED");
         trip.setStatus("RETURNING");
         return tripRepository.save(trip);
     }
 
     @Transactional
-    public TripEntity completeTrip(UUID tripId, CompleteTripRequest req) {
-        TripEntity trip = get(tripId);
+    public TripEntity completeTrip(UUID tripId, CompleteTripRequest req, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, userId, isDriver, isAdmin, orgId);
         if (!"DEPARTED".equals(trip.getStatus()) && !"RETURNING".equals(trip.getStatus())) {
             throw TripException.invalidState("DEPARTED|RETURNING", trip.getStatus());
         }
@@ -149,14 +179,14 @@ public class TripService {
     }
 
     @Transactional
-    public TripEntity registerReturn(RegisterReturnRequest req) {
+    public TripEntity registerReturn(RegisterReturnRequest req, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
         return completeTrip(req.tripId(),
-                new CompleteTripRequest(req.returnKmIndex(), req.returnFuelIndex(), req.returnLocation()));
+                new CompleteTripRequest(req.returnKmIndex(), req.returnFuelIndex(), req.returnLocation()), userId, isDriver, isAdmin, orgId);
     }
 
     @Transactional
-    public TripEntity cancelTrip(UUID tripId, String reason) {
-        TripEntity trip = get(tripId);
+    public TripEntity cancelTrip(UUID tripId, String reason, UUID managerId, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, managerId, false, isAdmin, orgId);
         if (!"SCHEDULED".equals(trip.getStatus()) && !"DEPARTED".equals(trip.getStatus())) {
             throw TripException.invalidState("SCHEDULED|DEPARTED", trip.getStatus());
         }
@@ -169,16 +199,16 @@ public class TripService {
     }
 
     @Transactional
-    public TripEntity changeDriver(UUID tripId, UUID newDriverId) {
-        TripEntity trip = get(tripId);
+    public TripEntity changeDriver(UUID tripId, UUID newDriverId, UUID managerId, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, managerId, false, isAdmin, orgId);
         driverRepository.findById(newDriverId).orElseThrow(() -> TripException.notFound(newDriverId));
         trip.setDriverId(newDriverId);
         return tripRepository.save(trip);
     }
 
     @Transactional
-    public void telemetry(UUID tripId, TelemetryRequest req) {
-        TripEntity trip = get(tripId);
+    public void telemetry(UUID tripId, TelemetryRequest req, UUID userId, boolean isDriver, boolean isAdmin, UUID orgId) {
+        TripEntity trip = get(tripId, userId, isDriver, isAdmin, orgId);
         operationalRepository.findByVehicleId(trip.getVehicleId()).ifPresent(op -> {
             if (req.lat() != null) op.setLatitude(BigDecimal.valueOf(req.lat()));
             if (req.lng() != null) op.setLongitude(BigDecimal.valueOf(req.lng()));

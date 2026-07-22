@@ -36,65 +36,65 @@ public class FleetController {
 
     @GetMapping
     public ResponseEntity<List<FleetResponse>> list(Authentication auth) {
-        return ResponseEntity.ok(fleetService.listByManager(SecurityUtils.getUserId(auth)));
+        return ResponseEntity.ok(fleetService.listFleets(SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FleetResponse> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(fleetService.get(id));
+    public ResponseEntity<FleetResponse> get(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(fleetService.get(id, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/{id}/stats")
-    public ResponseEntity<FleetStatsResponse> stats(@PathVariable UUID id) {
-        return ResponseEntity.ok(fleetService.stats(id));
+    public ResponseEntity<FleetStatsResponse> stats(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(fleetService.stats(id, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FleetResponse> update(@PathVariable UUID id, @RequestBody FleetRequest req) {
-        return ResponseEntity.ok(fleetService.update(id, req));
+    public ResponseEntity<FleetResponse> update(@PathVariable UUID id, @RequestBody FleetRequest req, Authentication auth) {
+        return ResponseEntity.ok(fleetService.update(id, req, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        fleetService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication auth) {
+        fleetService.delete(id, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     // ----- Vehicules de la flotte -----
 
     @GetMapping("/{id}/vehicles")
-    public ResponseEntity<List<VehicleEntity>> vehicles(@PathVariable UUID id) {
-        return ResponseEntity.ok(fleetService.getVehicles(id));
+    public ResponseEntity<List<VehicleEntity>> vehicles(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(fleetService.getVehicles(id, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PostMapping("/{id}/vehicles")
-    public ResponseEntity<Void> addVehicle(@PathVariable UUID id, @RequestBody VehicleIdRequest req) {
-        fleetService.addVehicle(id, req.vehicleId());
+    public ResponseEntity<Void> addVehicle(@PathVariable UUID id, @RequestBody VehicleIdRequest req, Authentication auth) {
+        fleetService.addVehicle(id, req.vehicleId(), SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/vehicles/{vehicleId}")
-    public ResponseEntity<Void> removeVehicle(@PathVariable UUID id, @PathVariable UUID vehicleId) {
-        fleetService.removeVehicle(id, vehicleId);
+    public ResponseEntity<Void> removeVehicle(@PathVariable UUID id, @PathVariable UUID vehicleId, Authentication auth) {
+        fleetService.removeVehicle(id, vehicleId, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     // ----- Chauffeurs de la flotte -----
 
     @GetMapping("/{id}/drivers")
-    public ResponseEntity<List<DriverResponse>> drivers(@PathVariable UUID id) {
-        return ResponseEntity.ok(driverService.list(id, null));
+    public ResponseEntity<List<DriverResponse>> drivers(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(driverService.list(id, null, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PostMapping("/{id}/drivers")
-    public ResponseEntity<Void> addDriver(@PathVariable UUID id, @RequestBody IdentifierRequest req) {
-        driverService.addExistingDriverToFleet(id, req.identifier());
+    public ResponseEntity<Void> addDriver(@PathVariable UUID id, @RequestBody IdentifierRequest req, Authentication auth) {
+        driverService.addExistingDriverToFleet(id, req.identifier(), SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/drivers/{driverId}")
-    public ResponseEntity<Void> removeDriver(@PathVariable UUID id, @PathVariable UUID driverId) {
-        driverService.removeDriverFromFleet(id, driverId);
+    public ResponseEntity<Void> removeDriver(@PathVariable UUID id, @PathVariable UUID driverId, Authentication auth) {
+        driverService.removeDriverFromFleet(id, driverId, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 }

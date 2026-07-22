@@ -31,4 +31,11 @@ public class DriverEntity {
 
     @Column(name = "photo_url")
     private String photoUrl;
+
+    @Column(name = "manager_id")
+    private UUID managerId;
+
+    @Column(name = "deleted")
+    @Builder.Default
+    private boolean deleted = false;
 }

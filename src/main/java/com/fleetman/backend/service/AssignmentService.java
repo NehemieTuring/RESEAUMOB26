@@ -19,24 +19,28 @@ public class AssignmentService {
     }
 
     @Transactional
-    public AssignmentEntity create(AssignmentEntity assignment) {
+    public AssignmentEntity create(AssignmentEntity assignment, UUID managerId) {
         if (assignment.getStatus() == null) assignment.setStatus("PLANNED");
+        assignment.setManagerId(managerId);
         return assignmentRepository.save(assignment);
     }
 
-    public List<AssignmentEntity> list(UUID scheduleId, UUID fleetId) {
-        if (scheduleId != null) return assignmentRepository.findByScheduleId(scheduleId);
-        if (fleetId != null) return assignmentRepository.findByFleetId(fleetId);
-        return assignmentRepository.findAll();
+    public List<AssignmentEntity> list(UUID scheduleId, UUID fleetId, UUID managerId) {
+        List<AssignmentEntity> assignments = managerId != null ? assignmentRepository.findByManagerId(managerId) : assignmentRepository.findAll();
+        if (scheduleId != null) assignments = assignments.stream().filter(a -> scheduleId.equals(a.getScheduleId())).toList();
+        if (fleetId != null) assignments = assignments.stream().filter(a -> fleetId.equals(a.getFleetId())).toList();
+        return assignments;
     }
 
-    public AssignmentEntity get(UUID id) {
-        return assignmentRepository.findById(id).orElseThrow(() -> PlanningException.notFound(id));
+    public AssignmentEntity get(UUID id, UUID managerId) {
+        AssignmentEntity a = assignmentRepository.findById(id).orElseThrow(() -> PlanningException.notFound(id));
+        if (managerId != null) com.fleetman.backend.controller.SecurityUtils.requireOwnership(a.getManagerId(), managerId);
+        return a;
     }
 
     @Transactional
-    public AssignmentEntity update(UUID id, AssignmentEntity req) {
-        AssignmentEntity a = get(id);
+    public AssignmentEntity update(UUID id, AssignmentEntity req, UUID managerId) {
+        AssignmentEntity a = get(id, managerId);
         if (req.getStatus() != null) a.setStatus(req.getStatus());
         if (req.getStartDatetime() != null) a.setStartDatetime(req.getStartDatetime());
         if (req.getEndDatetime() != null) a.setEndDatetime(req.getEndDatetime());
@@ -45,7 +49,8 @@ public class AssignmentService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        assignmentRepository.deleteById(id);
+    public void delete(UUID id, UUID managerId) {
+        AssignmentEntity a = get(id, managerId);
+        assignmentRepository.delete(a);
     }
 }

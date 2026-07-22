@@ -9,6 +9,7 @@ import java.util.*;
 @Repository
 public interface AssignmentRepository extends JpaRepository<AssignmentEntity, UUID> {
     List<AssignmentEntity> findByScheduleId(UUID scheduleId);
+    List<AssignmentEntity> findByManagerId(UUID managerId);
     List<AssignmentEntity> findByFleetId(UUID fleetId);
     List<AssignmentEntity> findByVehicleId(UUID vehicleId);
     List<AssignmentEntity> findByDriverId(UUID driverId);

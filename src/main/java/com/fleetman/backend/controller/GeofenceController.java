@@ -30,29 +30,29 @@ public class GeofenceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<GeofenceZoneEntity>> list(@RequestParam(required = false) String category) {
-        return ResponseEntity.ok(service.listZones(category));
+    public ResponseEntity<List<GeofenceZoneEntity>> list(@RequestParam(required = false) String category, Authentication auth) {
+        return ResponseEntity.ok(service.listZones(category, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/mine")
     public ResponseEntity<List<GeofenceZoneEntity>> mine(Authentication auth) {
-        return ResponseEntity.ok(service.getZonesByManager(SecurityUtils.getUserId(auth)));
+        return ResponseEntity.ok(service.getZonesByManager(SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<GeofenceZoneEntity> update(@PathVariable UUID id, @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(service.updateZone(id, updates));
+    public ResponseEntity<GeofenceZoneEntity> update(@PathVariable UUID id, @RequestBody Map<String, Object> updates, Authentication auth) {
+        return ResponseEntity.ok(service.updateZone(id, updates, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.deleteZone(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication auth) {
+        service.deleteZone(id, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/check")
     public ResponseEntity<Map<String, Boolean>> check(@PathVariable UUID id,
-                                                      @RequestParam double lat, @RequestParam double lng) {
-        return ResponseEntity.ok(Map.of("inside", service.checkPointInZone(id, lat, lng)));
+                                                      @RequestParam double lat, @RequestParam double lng, Authentication auth) {
+        return ResponseEntity.ok(Map.of("inside", service.checkPointInZone(id, lat, lng, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth))));
     }
 }

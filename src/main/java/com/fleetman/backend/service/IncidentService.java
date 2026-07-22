@@ -6,6 +6,7 @@ import com.fleetman.backend.entity.VehicleEntity;
 import com.fleetman.backend.exception.OperationException;
 import com.fleetman.backend.repository.ExpenseRepository;
 import com.fleetman.backend.repository.IncidentRepository;
+import com.fleetman.backend.repository.UserRepository;
 import com.fleetman.backend.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,22 +21,26 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final ExpenseRepository expenseRepository;
     private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
     private final InternalNotificationService notificationService;
 
     public IncidentService(IncidentRepository incidentRepository,
                            ExpenseRepository expenseRepository,
                            VehicleRepository vehicleRepository,
+                           UserRepository userRepository,
                            InternalNotificationService notificationService) {
         this.incidentRepository = incidentRepository;
         this.expenseRepository = expenseRepository;
         this.vehicleRepository = vehicleRepository;
+        this.userRepository = userRepository;
         this.notificationService = notificationService;
     }
 
     @Transactional
-    public IncidentEntity create(IncidentEntity incident) {
+    public IncidentEntity create(IncidentEntity incident, UUID managerId) {
         if (incident.getIncidentDateTime() == null) incident.setIncidentDateTime(Instant.now());
         if (incident.getStatus() == null) incident.setStatus("OPEN");
+        incident.setManagerId(managerId);
         IncidentEntity saved = incidentRepository.save(incident);
 
         VehicleEntity vehicle = incident.getVehicleId() != null
@@ -70,19 +75,32 @@ public class IncidentService {
         return saved;
     }
 
-    public List<IncidentEntity> list(UUID vehicleId) {
-        return vehicleId != null
-                ? incidentRepository.findByVehicleIdAndDeletedFalse(vehicleId)
-                : incidentRepository.findByDeletedFalse();
+    public List<IncidentEntity> list(UUID vehicleId, UUID userId, boolean isAdmin, UUID orgId) {
+        List<IncidentEntity> list = isAdmin ? incidentRepository.findAllByOrganizationIdAndDeletedFalse(orgId)
+                : (userId != null ? incidentRepository.findAllByManagerIdAndDeletedFalse(userId) : incidentRepository.findByDeletedFalse());
+        if (vehicleId != null) {
+            return list.stream().filter(i -> vehicleId.equals(i.getVehicleId())).toList();
+        }
+        return list;
     }
 
-    public IncidentEntity get(UUID id) {
-        return incidentRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+    public IncidentEntity get(UUID id, UUID userId, boolean isAdmin, UUID orgId) {
+        IncidentEntity i = incidentRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+        if (userId != null) {
+            if (userId.equals(i.getManagerId())) return i;
+            if (isAdmin && orgId != null) {
+                boolean sameOrg = userRepository.findById(i.getManagerId())
+                        .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+                if (sameOrg) return i;
+            }
+            throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cet incident.");
+        }
+        return i;
     }
 
     @Transactional
-    public IncidentEntity update(UUID id, IncidentEntity req) {
-        IncidentEntity i = get(id);
+    public IncidentEntity update(UUID id, IncidentEntity req, UUID managerId, boolean isAdmin, UUID orgId) {
+        IncidentEntity i = get(id, managerId, isAdmin, orgId);
         if (req.getDescription() != null) i.setDescription(req.getDescription());
         if (req.getSeverity() != null) i.setSeverity(req.getSeverity());
         if (req.getStatus() != null) i.setStatus(req.getStatus());
@@ -91,8 +109,8 @@ public class IncidentService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        IncidentEntity i = get(id);
+    public void delete(UUID id, UUID managerId, boolean isAdmin, UUID orgId) {
+        IncidentEntity i = get(id, managerId, isAdmin, orgId);
         i.setDeleted(true);
         i.setDeletedAt(Instant.now());
         incidentRepository.save(i);

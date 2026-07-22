@@ -13,9 +13,11 @@ import java.util.UUID;
 public class FleetManagerService {
 
     private final FleetManagerRepository fleetManagerRepository;
+    private final FileStorageService fileStorageService;
 
-    public FleetManagerService(FleetManagerRepository fleetManagerRepository) {
+    public FleetManagerService(FleetManagerRepository fleetManagerRepository, FileStorageService fileStorageService) {
         this.fleetManagerRepository = fleetManagerRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     public List<FleetManagerEntity> list() {
@@ -36,6 +38,15 @@ public class FleetManagerService {
         if (req.getCompanyAddress() != null) mgr.setCompanyAddress(req.getCompanyAddress());
         if (req.getCompanyCity() != null) mgr.setCompanyCity(req.getCompanyCity());
         if (req.getCompanyLogoUrl() != null) mgr.setCompanyLogoUrl(req.getCompanyLogoUrl());
+        return fleetManagerRepository.save(mgr);
+    }
+
+    @Transactional
+    public FleetManagerEntity uploadCompanyLogo(UUID userId, org.springframework.web.multipart.MultipartFile file) {
+        FleetManagerEntity mgr = fleetManagerRepository.findById(userId)
+                .orElseGet(() -> FleetManagerEntity.builder().userId(userId).build());
+        String path = fileStorageService.store(file, userId, "COMPANY", "LOGO");
+        mgr.setCompanyLogoUrl(path);
         return fleetManagerRepository.save(mgr);
     }
 }

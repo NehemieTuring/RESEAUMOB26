@@ -8,6 +8,7 @@ import com.fleetman.backend.entity.VehicleEntity;
 import com.fleetman.backend.exception.FleetException;
 import com.fleetman.backend.repository.DriverRepository;
 import com.fleetman.backend.repository.FleetRepository;
+import com.fleetman.backend.repository.UserRepository;
 import com.fleetman.backend.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +26,16 @@ public class FleetService {
     private final FleetRepository fleetRepository;
     private final VehicleRepository vehicleRepository;
     private final DriverRepository driverRepository;
+    private final UserRepository userRepository;
 
     public FleetService(FleetRepository fleetRepository,
                         VehicleRepository vehicleRepository,
-                        DriverRepository driverRepository) {
+                        DriverRepository driverRepository,
+                        UserRepository userRepository) {
         this.fleetRepository = fleetRepository;
         this.vehicleRepository = vehicleRepository;
         this.driverRepository = driverRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -44,43 +48,55 @@ public class FleetService {
         return toResponse(fleetRepository.save(fleet));
     }
 
-    public List<FleetResponse> listByManager(UUID managerId) {
-        return fleetRepository.findByManagerId(managerId).stream()
-                .map(this::toResponse).collect(Collectors.toList());
+    public List<FleetResponse> listFleets(UUID userId, boolean isAdmin, UUID orgId) {
+        List<FleetEntity> fleets = isAdmin ? fleetRepository.findAllByOrganizationId(orgId)
+                : fleetRepository.findByManagerId(userId);
+        return fleets.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    public FleetResponse get(UUID id) {
-        return toResponse(getEntity(id));
+    public FleetResponse get(UUID id, UUID managerId, boolean isAdmin, UUID orgId) {
+        return toResponse(getEntity(id, managerId, isAdmin, orgId));
     }
 
-    public FleetEntity getEntity(UUID id) {
-        return fleetRepository.findById(id).orElseThrow(() -> FleetException.notFound(id));
+    public FleetEntity getEntity(UUID id, UUID userId, boolean isAdmin, UUID orgId) {
+        FleetEntity fleet = fleetRepository.findById(id).orElseThrow(() -> FleetException.notFound(id));
+        if (userId != null) {
+            if (userId.equals(fleet.getManagerId())) return fleet;
+            if (isAdmin && orgId != null) {
+                boolean sameOrg = userRepository.findById(fleet.getManagerId())
+                        .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+                if (sameOrg) return fleet;
+            }
+            throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette flotte.");
+        }
+        return fleet;
     }
 
     @Transactional
-    public FleetResponse update(UUID id, FleetRequest req) {
-        FleetEntity fleet = getEntity(id);
+    public FleetResponse update(UUID id, FleetRequest req, UUID managerId, boolean isAdmin, UUID orgId) {
+        FleetEntity fleet = getEntity(id, managerId, isAdmin, orgId);
         if (req.name() != null) fleet.setName(req.name());
         if (req.phoneNumber() != null) fleet.setPhoneNumber(req.phoneNumber());
         return toResponse(fleetRepository.save(fleet));
     }
 
     @Transactional
-    public void delete(UUID id) {
-        getEntity(id);
+    public void delete(UUID id, UUID managerId, boolean isAdmin, UUID orgId) {
+        getEntity(id, managerId, isAdmin, orgId);
         if (vehicleRepository.countByFleetIdAndDeletedFalse(id) > 0) {
             throw FleetException.cannotDeleteNotEmpty();
         }
         fleetRepository.deleteById(id);
     }
 
-    public List<VehicleEntity> getVehicles(UUID fleetId) {
+    public List<VehicleEntity> getVehicles(UUID fleetId, UUID managerId, boolean isAdmin, UUID orgId) {
+        getEntity(fleetId, managerId, isAdmin, orgId); // Check ownership
         return vehicleRepository.findByFleetIdAndDeletedFalse(fleetId);
     }
 
     @Transactional
-    public void addVehicle(UUID fleetId, UUID vehicleId) {
-        getEntity(fleetId);
+    public void addVehicle(UUID fleetId, UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        getEntity(fleetId, managerId, isAdmin, orgId);
         VehicleEntity v = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> FleetException.notFound(vehicleId));
         if (v.getFleetId() != null && !v.getFleetId().equals(fleetId)) {
@@ -91,7 +107,8 @@ public class FleetService {
     }
 
     @Transactional
-    public void removeVehicle(UUID fleetId, UUID vehicleId) {
+    public void removeVehicle(UUID fleetId, UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        getEntity(fleetId, managerId, isAdmin, orgId); // Check ownership
         VehicleEntity v = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> FleetException.notFound(vehicleId));
         if (fleetId.equals(v.getFleetId())) {
@@ -100,7 +117,8 @@ public class FleetService {
         }
     }
 
-    public FleetStatsResponse stats(UUID fleetId) {
+    public FleetStatsResponse stats(UUID fleetId, UUID managerId, boolean isAdmin, UUID orgId) {
+        getEntity(fleetId, managerId, isAdmin, orgId); // Check ownership
         List<VehicleEntity> vehicles = vehicleRepository.findByFleetIdAndDeletedFalse(fleetId);
         Map<String, Long> byStatus = vehicles.stream()
                 .collect(Collectors.groupingBy(VehicleEntity::getStatus, Collectors.counting()));

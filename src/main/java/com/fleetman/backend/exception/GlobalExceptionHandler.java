@@ -61,8 +61,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-        pd.setTitle("Bad Request");
-        pd.setProperty("code", "REQ_400");
+        pd.setTitle("Invalid Argument");
+        pd.setProperty("code", "ARG_400");
         pd.setProperty("timestamp", Instant.now());
         return ResponseEntity.badRequest().body(pd);
     }

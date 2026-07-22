@@ -16,30 +16,45 @@ public class DocumentService {
 
     private final VehicleDocumentRepository vehicleDocumentRepository;
     private final DriverDocumentRepository driverDocumentRepository;
+    private final VehicleService vehicleService;
+    private final DriverService driverService;
 
     public DocumentService(VehicleDocumentRepository vehicleDocumentRepository,
-                           DriverDocumentRepository driverDocumentRepository) {
+                           DriverDocumentRepository driverDocumentRepository,
+                           VehicleService vehicleService,
+                           DriverService driverService) {
         this.vehicleDocumentRepository = vehicleDocumentRepository;
         this.driverDocumentRepository = driverDocumentRepository;
+        this.vehicleService = vehicleService;
+        this.driverService = driverService;
     }
 
     // ----- Documents vehicule -----
 
     @Transactional
-    public VehicleDocumentEntity createVehicleDocument(VehicleDocumentEntity doc) {
+    public VehicleDocumentEntity createVehicleDocument(VehicleDocumentEntity doc, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && doc.getVehicleId() != null) {
+            vehicleService.getVehicleDetails(doc.getVehicleId(), managerId, isAdmin, orgId);
+        }
         return vehicleDocumentRepository.save(doc);
     }
 
-    public List<VehicleDocumentEntity> vehicleDocuments(UUID vehicleId) {
+    public List<VehicleDocumentEntity> vehicleDocuments(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && vehicleId != null) {
+            vehicleService.getVehicleDetails(vehicleId, managerId, isAdmin, orgId);
+        }
         return vehicleId != null
                 ? vehicleDocumentRepository.findByVehicleIdAndDeletedFalse(vehicleId)
-                : vehicleDocumentRepository.findByDeletedFalse();
+                : (managerId != null ? List.of() : vehicleDocumentRepository.findByDeletedFalse());
     }
 
     @Transactional
-    public void deleteVehicleDocument(UUID id) {
+    public void deleteVehicleDocument(UUID id, UUID managerId, boolean isAdmin, UUID orgId) {
         VehicleDocumentEntity d = vehicleDocumentRepository.findById(id)
                 .orElseThrow(() -> DocumentException.notFound(id));
+        if (managerId != null && d.getVehicleId() != null) {
+            vehicleService.getVehicleDetails(d.getVehicleId(), managerId, isAdmin, orgId);
+        }
         d.setDeleted(true);
         vehicleDocumentRepository.save(d);
     }
@@ -47,20 +62,29 @@ public class DocumentService {
     // ----- Documents chauffeur -----
 
     @Transactional
-    public DriverDocumentEntity createDriverDocument(DriverDocumentEntity doc) {
+    public DriverDocumentEntity createDriverDocument(DriverDocumentEntity doc, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && doc.getDriverId() != null) {
+            driverService.get(doc.getDriverId(), managerId, isAdmin, orgId);
+        }
         return driverDocumentRepository.save(doc);
     }
 
-    public List<DriverDocumentEntity> driverDocuments(UUID driverId) {
+    public List<DriverDocumentEntity> driverDocuments(UUID driverId, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && driverId != null) {
+            driverService.get(driverId, managerId, isAdmin, orgId);
+        }
         return driverId != null
                 ? driverDocumentRepository.findByDriverIdAndDeletedFalse(driverId)
-                : driverDocumentRepository.findByDeletedFalse();
+                : (managerId != null ? List.of() : driverDocumentRepository.findByDeletedFalse());
     }
 
     @Transactional
-    public void deleteDriverDocument(UUID id) {
+    public void deleteDriverDocument(UUID id, UUID managerId, boolean isAdmin, UUID orgId) {
         DriverDocumentEntity d = driverDocumentRepository.findById(id)
                 .orElseThrow(() -> DocumentException.notFound(id));
+        if (managerId != null && d.getDriverId() != null) {
+            driverService.get(d.getDriverId(), managerId, isAdmin, orgId);
+        }
         d.setDeleted(true);
         driverDocumentRepository.save(d);
     }

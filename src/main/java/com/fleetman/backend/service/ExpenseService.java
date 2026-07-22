@@ -21,24 +21,33 @@ public class ExpenseService {
     }
 
     @Transactional
-    public ExpenseEntity create(ExpenseEntity expense) {
+    public ExpenseEntity create(ExpenseEntity expense, UUID managerId) {
         if (expense.getStatus() == null) expense.setStatus("PENDING");
+        expense.setManagerId(managerId);
         return expenseRepository.save(expense);
     }
 
     public List<ExpenseEntity> list(UUID fleetId, UUID managerId) {
-        if (fleetId != null) return expenseRepository.findByFleetIdAndDeletedFalse(fleetId);
-        if (managerId != null) return expenseRepository.findByManagerIdAndDeletedFalse(managerId);
-        return expenseRepository.findByDeletedFalse();
+        List<ExpenseEntity> list = managerId != null
+                ? expenseRepository.findByManagerIdAndDeletedFalse(managerId)
+                : expenseRepository.findByDeletedFalse();
+        if (fleetId != null) {
+            return list.stream().filter(e -> fleetId.equals(e.getFleetId())).toList();
+        }
+        return list;
     }
 
-    public ExpenseEntity get(UUID id) {
-        return expenseRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+    public ExpenseEntity get(UUID id, UUID managerId) {
+        ExpenseEntity e = expenseRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+        if (managerId != null) {
+            com.fleetman.backend.controller.SecurityUtils.requireOwnership(e.getManagerId(), managerId);
+        }
+        return e;
     }
 
     @Transactional
-    public ExpenseEntity approve(UUID id) {
-        ExpenseEntity e = get(id);
+    public ExpenseEntity approve(UUID id, UUID managerId) {
+        ExpenseEntity e = get(id, managerId);
         e.setStatus("APPROVED");
         expenseRepository.save(e);
         // Workflow : imputer le budget de la flotte
@@ -49,16 +58,16 @@ public class ExpenseService {
     }
 
     @Transactional
-    public ExpenseEntity reject(UUID id, String reason) {
-        ExpenseEntity e = get(id);
+    public ExpenseEntity reject(UUID id, String reason, UUID managerId) {
+        ExpenseEntity e = get(id, managerId);
         e.setStatus("REJECTED");
         e.setRejectReason(reason);
         return expenseRepository.save(e);
     }
 
     @Transactional
-    public void delete(UUID id) {
-        ExpenseEntity e = get(id);
+    public void delete(UUID id, UUID managerId) {
+        ExpenseEntity e = get(id, managerId);
         e.setDeleted(true);
         expenseRepository.save(e);
     }

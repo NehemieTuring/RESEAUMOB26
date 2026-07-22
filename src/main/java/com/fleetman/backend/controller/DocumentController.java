@@ -23,34 +23,34 @@ public class DocumentController {
     }
 
     @PostMapping("/vehicles")
-    public ResponseEntity<VehicleDocumentEntity> createVehicleDoc(@RequestBody VehicleDocumentEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.createVehicleDocument(req));
+    public ResponseEntity<VehicleDocumentEntity> createVehicleDoc(@RequestBody VehicleDocumentEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createVehicleDocument(req, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/vehicles")
-    public ResponseEntity<List<VehicleDocumentEntity>> vehicleDocs(@RequestParam(required = false) UUID vehicleId) {
-        return ResponseEntity.ok(service.vehicleDocuments(vehicleId));
+    public ResponseEntity<List<VehicleDocumentEntity>> vehicleDocs(@RequestParam(required = false) UUID vehicleId, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.vehicleDocuments(vehicleId, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth)));
     }
 
     @DeleteMapping("/vehicles/{id}")
-    public ResponseEntity<Void> deleteVehicleDoc(@PathVariable UUID id) {
-        service.deleteVehicleDocument(id);
+    public ResponseEntity<Void> deleteVehicleDoc(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.deleteVehicleDocument(id, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/drivers")
-    public ResponseEntity<DriverDocumentEntity> createDriverDoc(@RequestBody DriverDocumentEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.createDriverDocument(req));
+    public ResponseEntity<DriverDocumentEntity> createDriverDoc(@RequestBody DriverDocumentEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createDriverDocument(req, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/drivers")
-    public ResponseEntity<List<DriverDocumentEntity>> driverDocs(@RequestParam(required = false) UUID driverId) {
-        return ResponseEntity.ok(service.driverDocuments(driverId));
+    public ResponseEntity<List<DriverDocumentEntity>> driverDocs(@RequestParam(required = false) UUID driverId, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.driverDocuments(driverId, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth)));
     }
 
     @DeleteMapping("/drivers/{id}")
-    public ResponseEntity<Void> deleteDriverDoc(@PathVariable UUID id) {
-        service.deleteDriverDocument(id);
+    public ResponseEntity<Void> deleteDriverDoc(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.deleteDriverDocument(id, com.fleetman.backend.controller.SecurityUtils.getUserId(auth), com.fleetman.backend.controller.SecurityUtils.isAdmin(auth), com.fleetman.backend.controller.SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.noContent().build();
     }
 }

@@ -6,6 +6,7 @@ import com.fleetman.backend.entity.UserEntity;
 import com.fleetman.backend.exception.DriverException;
 import com.fleetman.backend.exception.VehicleException;
 import com.fleetman.backend.repository.DriverRepository;
+import com.fleetman.backend.repository.FleetRepository;
 import com.fleetman.backend.repository.UserRepository;
 import com.fleetman.backend.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
@@ -24,21 +25,31 @@ public class DriverService {
     private final DriverRepository driverRepository;
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
+    private final FleetRepository fleetRepository;
 
     public DriverService(InternalAuthService authService,
                          FileStorageService fileStorageService,
                          DriverRepository driverRepository,
                          UserRepository userRepository,
-                         VehicleRepository vehicleRepository) {
+                         VehicleRepository vehicleRepository,
+                         FleetRepository fleetRepository) {
         this.authService = authService;
         this.fileStorageService = fileStorageService;
         this.driverRepository = driverRepository;
         this.userRepository = userRepository;
         this.vehicleRepository = vehicleRepository;
+        this.fleetRepository = fleetRepository;
     }
 
     @Transactional
-    public DriverResponse registerDriverWithPhoto(UUID fleetId, DriverRegistrationRequest req, MultipartFile photo) {
+    public DriverResponse registerDriverWithPhoto(UUID fleetId, DriverRegistrationRequest req, MultipartFile photo, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && fleetId != null) {
+            fleetRepository.findById(fleetId).ifPresent(f -> {
+                if (!isAdmin && !f.getManagerId().equals(managerId)) {
+                    throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette flotte.");
+                }
+            });
+        }
         if (req.licenceNumber() != null && driverRepository.existsByLicenceNumber(req.licenceNumber())) {
             throw DriverException.licenceConflict();
         }
@@ -50,6 +61,7 @@ public class DriverService {
         DriverEntity driver = driverRepository.findById(userId)
                 .orElseGet(() -> DriverEntity.builder().userId(userId).build());
         driver.setFleetId(fleetId);
+        driver.setManagerId(managerId);
         driver.setLicenceNumber(req.licenceNumber());
         driver.setStatus("ACTIVE");
         if (photo != null && !photo.isEmpty()) {
@@ -60,10 +72,24 @@ public class DriverService {
         return toResponse(driver);
     }
 
-    public List<DriverResponse> list(UUID fleetId, Boolean isAssigned) {
-        List<DriverEntity> drivers = fleetId != null
-                ? driverRepository.findByFleetId(fleetId)
-                : driverRepository.findAll();
+    public List<DriverResponse> list(UUID fleetId, Boolean isAssigned, UUID userId, boolean isAdmin, UUID orgId) {
+        List<DriverEntity> drivers;
+        if (fleetId != null) {
+            if (userId != null) {
+                fleetRepository.findById(fleetId).ifPresent(f -> {
+                    if (!isAdmin && !f.getManagerId().equals(userId)) {
+                        throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette flotte.");
+                    }
+                });
+            }
+            drivers = driverRepository.findByFleetId(fleetId);
+        } else if (orgId != null) {
+            drivers = driverRepository.findAllByOrganizationIdAndDeletedFalse(orgId);
+        } else if (userId != null) {
+            drivers = driverRepository.findByManagerIdAndDeletedFalse(userId);
+        } else {
+            drivers = driverRepository.findAll();
+        }
         return drivers.stream()
                 .filter(d -> isAssigned == null
                         || (isAssigned == (d.getAssignedVehicleId() != null)))
@@ -71,23 +97,33 @@ public class DriverService {
                 .collect(Collectors.toList());
     }
 
-    public DriverResponse get(UUID userId) {
-        return toResponse(getEntity(userId));
+    public DriverResponse get(UUID userId, UUID managerId, boolean isAdmin, UUID orgId) {
+        return toResponse(getEntity(userId, managerId, isAdmin, orgId));
     }
 
-    public DriverEntity getEntity(UUID userId) {
-        return driverRepository.findById(userId).orElseThrow(() -> DriverException.notFound(userId));
+    public DriverEntity getEntity(UUID userId, UUID managerId, boolean isAdmin, UUID orgId) {
+        DriverEntity driver = driverRepository.findById(userId).orElseThrow(() -> DriverException.notFound(userId));
+        if (orgId != null) {
+            boolean sameOrg = userRepository.findById(driver.getUserId())
+                    .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+            if (sameOrg) return driver;
+            throw new org.springframework.security.access.AccessDeniedException("Ce conducteur n'appartient pas a votre organisation.");
+        } else if (managerId != null) {
+            if (managerId.equals(driver.getManagerId())) return driver;
+            throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a ce conducteur.");
+        }
+        return driver;
     }
 
-    public DriverResponse search(String identifier) {
+    public DriverResponse search(String identifier, UUID managerId, boolean isAdmin, UUID orgId) {
         UserEntity user = userRepository.findByEmailOrUsername(identifier)
                 .orElseThrow(() -> DriverException.notFound(identifier));
-        return toResponse(getEntity(user.getId()));
+        return toResponse(getEntity(user.getId(), managerId, isAdmin, orgId));
     }
 
     @Transactional
-    public DriverResponse update(UUID userId, UpdateDriverRequest req) {
-        DriverEntity driver = getEntity(userId);
+    public DriverResponse update(UUID userId, UpdateDriverRequest req, UUID managerId, boolean isAdmin, UUID orgId) {
+        DriverEntity driver = getEntity(userId, managerId, isAdmin, orgId);
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> DriverException.notFound(userId));
         if (req.firstName() != null) user.setFirstName(req.firstName());
         if (req.lastName() != null) user.setLastName(req.lastName());
@@ -100,8 +136,8 @@ public class DriverService {
     }
 
     @Transactional
-    public void assignVehicle(UUID userId, UUID vehicleId) {
-        DriverEntity driver = getEntity(userId);
+    public void assignVehicle(UUID userId, UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        DriverEntity driver = getEntity(userId, managerId, isAdmin, orgId);
         var vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> VehicleException.notFound(vehicleId));
         driver.setAssignedVehicleId(vehicleId);
@@ -111,8 +147,8 @@ public class DriverService {
     }
 
     @Transactional
-    public void unassignVehicle(UUID userId, UUID vehicleId) {
-        DriverEntity driver = getEntity(userId);
+    public void unassignVehicle(UUID userId, UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        DriverEntity driver = getEntity(userId, managerId, isAdmin, orgId);
         driver.setAssignedVehicleId(null);
         driverRepository.save(driver);
         if (vehicleId != null) {
@@ -124,7 +160,14 @@ public class DriverService {
     }
 
     @Transactional
-    public void addExistingDriverToFleet(UUID fleetId, String identifier) {
+    public void addExistingDriverToFleet(UUID fleetId, String identifier, UUID managerId, boolean isAdmin, UUID orgId) {
+        if (managerId != null && fleetId != null) {
+            fleetRepository.findById(fleetId).ifPresent(f -> {
+                if (!isAdmin && !f.getManagerId().equals(managerId)) {
+                    throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette flotte.");
+                }
+            });
+        }
         UserEntity user = userRepository.findByEmailOrUsername(identifier)
                 .orElseThrow(() -> DriverException.notFound(identifier));
         DriverEntity driver = driverRepository.findById(user.getId())
@@ -134,8 +177,8 @@ public class DriverService {
     }
 
     @Transactional
-    public void removeDriverFromFleet(UUID fleetId, UUID driverId) {
-        DriverEntity driver = getEntity(driverId);
+    public void removeDriverFromFleet(UUID fleetId, UUID driverId, UUID managerId, boolean isAdmin, UUID orgId) {
+        DriverEntity driver = getEntity(driverId, managerId, isAdmin, orgId);
         if (fleetId.equals(driver.getFleetId())) {
             driver.setFleetId(null);
             driverRepository.save(driver);

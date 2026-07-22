@@ -7,6 +7,7 @@ import com.fleetman.backend.exception.OperationException;
 import com.fleetman.backend.repository.GeofencePointRepository;
 import com.fleetman.backend.repository.GeofencePointZoneLinkageRepository;
 import com.fleetman.backend.repository.GeofenceZoneRepository;
+import com.fleetman.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,13 +23,16 @@ public class InternalGeofenceService {
     private final GeofenceZoneRepository zoneRepository;
     private final GeofencePointRepository pointRepository;
     private final GeofencePointZoneLinkageRepository linkageRepository;
+    private final UserRepository userRepository;
 
     public InternalGeofenceService(GeofenceZoneRepository zoneRepository,
                                    GeofencePointRepository pointRepository,
-                                   GeofencePointZoneLinkageRepository linkageRepository) {
+                                   GeofencePointZoneLinkageRepository linkageRepository,
+                                   UserRepository userRepository) {
         this.zoneRepository = zoneRepository;
         this.pointRepository = pointRepository;
         this.linkageRepository = linkageRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -39,8 +43,8 @@ public class InternalGeofenceService {
     }
 
     @Transactional
-    public GeofenceZoneEntity updateZone(UUID zoneId, Map<String, Object> updates) {
-        GeofenceZoneEntity z = getActive(zoneId);
+    public GeofenceZoneEntity updateZone(UUID zoneId, Map<String, Object> updates, UUID managerId, boolean isAdmin, UUID orgId) {
+        GeofenceZoneEntity z = getActive(zoneId, managerId, isAdmin, orgId);
         updates.forEach((k, val) -> {
             switch (k) {
                 case "name" -> z.setName((String) val);
@@ -54,26 +58,30 @@ public class InternalGeofenceService {
     }
 
     @Transactional
-    public void deleteZone(UUID zoneId) {
-        GeofenceZoneEntity z = getActive(zoneId);
+    public void deleteZone(UUID zoneId, UUID managerId, boolean isAdmin, UUID orgId) {
+        GeofenceZoneEntity z = getActive(zoneId, managerId, isAdmin, orgId);
         z.setDeleted(true);
         zoneRepository.save(z);
     }
 
-    public List<GeofenceZoneEntity> getZonesByManager(UUID managerId) {
-        return zoneRepository.findByManagerIdAndDeletedFalse(managerId);
+    public List<GeofenceZoneEntity> getZonesByManager(UUID managerId, boolean isAdmin, UUID orgId) {
+        return isAdmin ? zoneRepository.findAllByOrganizationIdAndDeletedFalse(orgId)
+                : zoneRepository.findByManagerIdAndDeletedFalse(managerId);
     }
 
-    public List<GeofenceZoneEntity> listZones(String category) {
+    public List<GeofenceZoneEntity> listZones(String category, UUID managerId, boolean isAdmin, UUID orgId) {
+        List<GeofenceZoneEntity> zones = isAdmin ? zoneRepository.findAllByOrganizationIdAndDeletedFalse(orgId)
+                : (managerId != null ? zoneRepository.findByManagerIdAndDeletedFalse(managerId) : zoneRepository.findByDeletedFalse());
+        
         if (category == null || category.isBlank() || "all".equalsIgnoreCase(category)) {
-            return zoneRepository.findByDeletedFalse();
+            return zones;
         }
-        return zoneRepository.findByZoneTypeAndDeletedFalse(category.toUpperCase());
+        return zones.stream().filter(z -> category.toUpperCase().equals(z.getZoneType())).toList();
     }
 
     /** Point-in-zone : distance au centre pour un cercle, ray-casting pour un polygone. */
-    public boolean checkPointInZone(UUID zoneId, double lat, double lng) {
-        GeofenceZoneEntity zone = getActive(zoneId);
+    public boolean checkPointInZone(UUID zoneId, double lat, double lng, UUID managerId, boolean isAdmin, UUID orgId) {
+        GeofenceZoneEntity zone = getActive(zoneId, managerId, isAdmin, orgId);
         List<GeofencePointZoneLinkageEntity> links =
                 linkageRepository.findByZoneIdOrderByVertexOrder(zoneId);
 
@@ -98,10 +106,19 @@ public class InternalGeofenceService {
         return pointInPolygon(lng, lat, xs, ys);
     }
 
-    public GeofenceZoneEntity getActive(UUID zoneId) {
+    public GeofenceZoneEntity getActive(UUID zoneId, UUID managerId, boolean isAdmin, UUID orgId) {
         GeofenceZoneEntity z = zoneRepository.findById(zoneId)
                 .orElseThrow(() -> OperationException.notFound(zoneId));
         if (z.isDeleted()) throw OperationException.notFound(zoneId);
+        if (managerId != null) {
+            if (managerId.equals(z.getManagerId())) return z;
+            if (isAdmin && orgId != null) {
+                boolean sameOrg = userRepository.findById(z.getManagerId())
+                        .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+                if (sameOrg) return z;
+            }
+            throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette zone.");
+        }
         return z;
     }
 

@@ -40,27 +40,27 @@ public class VehicleService {
         return internalVehicleService.createVehicle(req, managerId);
     }
 
-    public List<VehicleEntity> getVehicles(UUID managerId, boolean isAdmin) {
-        return internalVehicleService.getVehicles(managerId, isAdmin);
+    public List<VehicleEntity> getVehicles(UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalVehicleService.getVehicles(managerId, isAdmin, orgId);
     }
 
-    public VehicleDetailResponse getVehicleDetails(UUID vehicleId) {
-        return internalVehicleService.getVehicleDetails(vehicleId);
-    }
-
-    @Transactional
-    public VehicleEntity patchVehicle(UUID vehicleId, Map<String, Object> updates) {
-        return internalVehicleService.patchVehicle(vehicleId, updates);
+    public VehicleDetailResponse getVehicleDetails(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalVehicleService.getVehicleDetails(vehicleId, managerId, isAdmin, orgId);
     }
 
     @Transactional
-    public void deleteVehicle(UUID vehicleId) {
-        internalVehicleService.deleteVehicle(vehicleId);
+    public VehicleEntity patchVehicle(UUID vehicleId, Map<String, Object> updates, UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalVehicleService.patchVehicle(vehicleId, updates, managerId, isAdmin, orgId);
     }
 
     @Transactional
-    public VehicleDetailResponse updateFinancialParameters(UUID vehicleId, FinancialParameterEntity req) {
-        internalVehicleService.getActive(vehicleId);
+    public void deleteVehicle(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalVehicleService.deleteVehicle(vehicleId, managerId, isAdmin, orgId);
+    }
+
+    @Transactional
+    public VehicleDetailResponse updateFinancialParameters(UUID vehicleId, FinancialParameterEntity req, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalVehicleService.getActive(vehicleId, managerId, isAdmin, orgId);
         FinancialParameterEntity fp = financialRepository.findByVehicleId(vehicleId)
                 .orElseGet(() -> FinancialParameterEntity.builder().vehicleId(vehicleId).build());
         if (req.getInsuranceNumber() != null) fp.setInsuranceNumber(req.getInsuranceNumber());
@@ -70,12 +70,12 @@ public class VehicleService {
         if (req.getDepreciationRate() != null) fp.setDepreciationRate(req.getDepreciationRate());
         if (req.getCostPerKm() != null) fp.setCostPerKm(req.getCostPerKm());
         financialRepository.save(fp);
-        return getVehicleDetails(vehicleId);
+        return getVehicleDetails(vehicleId, managerId, isAdmin, orgId);
     }
 
     @Transactional
-    public VehicleDetailResponse updateMaintenanceParameters(UUID vehicleId, MaintenanceParameterEntity req) {
-        internalVehicleService.getActive(vehicleId);
+    public VehicleDetailResponse updateMaintenanceParameters(UUID vehicleId, MaintenanceParameterEntity req, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalVehicleService.getActive(vehicleId, managerId, isAdmin, orgId);
         MaintenanceParameterEntity mp = maintenanceRepository.findByVehicleId(vehicleId)
                 .orElseGet(() -> MaintenanceParameterEntity.builder().vehicleId(vehicleId).build());
         if (req.getLastMaintenanceAt() != null) mp.setLastMaintenanceAt(req.getLastMaintenanceAt());
@@ -84,16 +84,18 @@ public class VehicleService {
         if (req.getBatteryHealth() != null) mp.setBatteryHealth(req.getBatteryHealth());
         if (req.getMaintenanceStatus() != null) mp.setMaintenanceStatus(req.getMaintenanceStatus());
         maintenanceRepository.save(mp);
-        return getVehicleDetails(vehicleId);
+        return getVehicleDetails(vehicleId, managerId, isAdmin, orgId);
     }
 
-    public OperationalParameterEntity getOperational(UUID vehicleId) {
+    public OperationalParameterEntity getOperational(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalVehicleService.getActive(vehicleId, managerId, isAdmin, orgId);
         return operationalRepository.findByVehicleId(vehicleId)
                 .orElseThrow(() -> VehicleException.notFound(vehicleId));
     }
 
     @Transactional
-    public void patchOperational(UUID vehicleId, Map<String, Object> updates) {
+    public void patchOperational(UUID vehicleId, Map<String, Object> updates, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalVehicleService.getActive(vehicleId, managerId, isAdmin, orgId);
         OperationalParameterEntity op = operationalRepository.findByVehicleId(vehicleId)
                 .orElseGet(() -> OperationalParameterEntity.builder().vehicleId(vehicleId).build());
         updates.forEach((k, val) -> {

@@ -8,5 +8,6 @@ import java.util.*;
 @Repository
 public interface MaintenanceRepository extends JpaRepository<MaintenanceEntity, UUID> {
     List<MaintenanceEntity> findByVehicleIdAndDeletedFalse(UUID vehicleId);
+    List<MaintenanceEntity> findByManagerIdAndDeletedFalse(UUID managerId);
     List<MaintenanceEntity> findByDeletedFalse();
 }

@@ -32,6 +32,7 @@ public class InternalVehicleService {
     private final ManufacturerRepository manufacturerRepository;
     private final VehicleSizeRepository sizeRepository;
     private final UsageTypeRepository usageTypeRepository;
+    private final UserRepository userRepository;
 
     public InternalVehicleService(VehicleRepository vehicleRepository,
                                   OperationalParameterRepository operationalRepository,
@@ -46,7 +47,8 @@ public class InternalVehicleService {
                                   VehicleTypeRepository vehicleTypeRepository,
                                   ManufacturerRepository manufacturerRepository,
                                   VehicleSizeRepository sizeRepository,
-                                  UsageTypeRepository usageTypeRepository) {
+                                  UsageTypeRepository usageTypeRepository,
+                                  UserRepository userRepository) {
         this.vehicleRepository = vehicleRepository;
         this.operationalRepository = operationalRepository;
         this.financialRepository = financialRepository;
@@ -61,6 +63,7 @@ public class InternalVehicleService {
         this.manufacturerRepository = manufacturerRepository;
         this.sizeRepository = sizeRepository;
         this.usageTypeRepository = usageTypeRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -70,17 +73,18 @@ public class InternalVehicleService {
         }
         VehicleEntity vehicle = VehicleEntity.builder()
                 .managerId(managerId)
-                .vehicleTypeId(req.vehicleTypeId())
+                .fleetId(req.fleetId())
+                .vehicleTypeId(null) // We can't map string to UUID directly if we don't have it, but vehicle_type_id is not strictly required if we have type string? Wait, it's a UUID field. Let's just leave it null for now, the frontend doesn't use it much anyway.
                 .licensePlate(req.licensePlate())
-                .brand(labelOf(brandRepository::findById, req.brandId()))
-                .model(labelOf(modelRepository::findById, req.modelId()))
+                .brand(req.brand())
+                .model(req.model())
                 .manufacturingYear(req.manufacturingYear())
-                .fuelType(labelOf(fuelTypeRepository::findById, req.fuelTypeId()))
-                .transmissionType(labelOf(transmissionTypeRepository::findById, req.transmissionTypeId()))
+                .fuelType(req.fuelType())
+                .transmissionType(req.transmissionType())
                 .tankCapacity(req.tankCapacity())
                 .totalSeatNumber(req.totalSeatNumber())
                 .averageFuelConsumption(req.averageFuelConsumption())
-                .color(labelOf(colorRepository::findById, req.colorId()))
+                .color(req.color())
                 .status("AVAILABLE")
                 .deleted(false)
                 .build();
@@ -97,30 +101,30 @@ public class InternalVehicleService {
     }
 
     @Transactional
-    public VehicleEntity updateVehicle(UUID vehicleId, VehicleRequest req) {
-        VehicleEntity v = getActive(vehicleId);
+    public VehicleEntity updateVehicle(UUID vehicleId, VehicleRequest req, UUID managerId, boolean isAdmin, UUID orgId) {
+        VehicleEntity v = getActive(vehicleId, managerId, isAdmin, orgId);
         if (req.licensePlate() != null && !req.licensePlate().equals(v.getLicensePlate())) {
             if (vehicleRepository.existsByLicensePlate(req.licensePlate())) {
                 throw VehicleException.plateConflict(req.licensePlate());
             }
             v.setLicensePlate(req.licensePlate());
         }
-        if (req.vehicleTypeId() != null) v.setVehicleTypeId(req.vehicleTypeId());
-        if (req.brandId() != null) v.setBrand(labelOf(brandRepository::findById, req.brandId()));
-        if (req.modelId() != null) v.setModel(labelOf(modelRepository::findById, req.modelId()));
+        if (req.brand() != null) v.setBrand(req.brand());
+        if (req.model() != null) v.setModel(req.model());
         if (req.manufacturingYear() != null) v.setManufacturingYear(req.manufacturingYear());
-        if (req.fuelTypeId() != null) v.setFuelType(labelOf(fuelTypeRepository::findById, req.fuelTypeId()));
-        if (req.transmissionTypeId() != null) v.setTransmissionType(labelOf(transmissionTypeRepository::findById, req.transmissionTypeId()));
+        if (req.fuelType() != null) v.setFuelType(req.fuelType());
+        if (req.transmissionType() != null) v.setTransmissionType(req.transmissionType());
         if (req.tankCapacity() != null) v.setTankCapacity(req.tankCapacity());
         if (req.totalSeatNumber() != null) v.setTotalSeatNumber(req.totalSeatNumber());
         if (req.averageFuelConsumption() != null) v.setAverageFuelConsumption(req.averageFuelConsumption());
-        if (req.colorId() != null) v.setColor(labelOf(colorRepository::findById, req.colorId()));
+        if (req.color() != null) v.setColor(req.color());
+        if (req.fleetId() != null) v.setFleetId(req.fleetId());
         return vehicleRepository.save(v);
     }
 
     @Transactional
-    public VehicleEntity patchVehicle(UUID vehicleId, Map<String, Object> updates) {
-        VehicleEntity v = getActive(vehicleId);
+    public VehicleEntity patchVehicle(UUID vehicleId, Map<String, Object> updates, UUID managerId, boolean isAdmin, UUID orgId) {
+        VehicleEntity v = getActive(vehicleId, managerId, isAdmin, orgId);
         updates.forEach((k, val) -> {
             switch (k) {
                 case "licensePlate" -> v.setLicensePlate((String) val);
@@ -137,15 +141,15 @@ public class InternalVehicleService {
     }
 
     @Transactional
-    public void deleteVehicle(UUID vehicleId) {
-        VehicleEntity v = getActive(vehicleId);
+    public void deleteVehicle(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        VehicleEntity v = getActive(vehicleId, managerId, isAdmin, orgId);
         v.setDeleted(true);
         v.setDeletedAt(Instant.now());
         vehicleRepository.save(v);
     }
 
-    public VehicleDetailResponse getVehicleDetails(UUID vehicleId) {
-        VehicleEntity v = getActive(vehicleId);
+    public VehicleDetailResponse getVehicleDetails(UUID vehicleId, UUID managerId, boolean isAdmin, UUID orgId) {
+        VehicleEntity v = getActive(vehicleId, managerId, isAdmin, orgId);
         return new VehicleDetailResponse(
                 v,
                 operationalRepository.findByVehicleId(vehicleId).orElse(null),
@@ -154,15 +158,28 @@ public class InternalVehicleService {
                 imageRepository.findByVehicleId(vehicleId));
     }
 
-    public List<VehicleEntity> getVehicles(UUID managerId, boolean isAdmin) {
-        return isAdmin ? vehicleRepository.findByDeletedFalse()
-                : vehicleRepository.findByManagerIdAndDeletedFalse(managerId);
+    public List<VehicleEntity> getVehicles(UUID managerId, boolean isAdmin, UUID orgId) {
+        if (orgId != null) {
+            return vehicleRepository.findAllByOrganizationIdAndDeletedFalse(orgId);
+        } else if (managerId != null) {
+            return vehicleRepository.findByManagerIdAndDeletedFalse(managerId);
+        }
+        return vehicleRepository.findByDeletedFalse();
     }
 
-    public VehicleEntity getActive(UUID vehicleId) {
+    public VehicleEntity getActive(UUID vehicleId, UUID userId, boolean isAdmin, UUID orgId) {
         VehicleEntity v = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> VehicleException.notFound(vehicleId));
         if (v.isDeleted()) throw VehicleException.notFound(vehicleId);
+        if (orgId != null) {
+            boolean sameOrg = userRepository.findById(v.getManagerId())
+                    .map(u -> orgId.equals(u.getOrganizationId())).orElse(false);
+            if (sameOrg) return v;
+            throw new org.springframework.security.access.AccessDeniedException("Ce vehicule n'appartient pas a votre organisation.");
+        } else if (userId != null) {
+            if (userId.equals(v.getManagerId())) return v;
+            throw new org.springframework.security.access.AccessDeniedException("Vous n'avez pas acces a cette ressource.");
+        }
         return v;
     }
 

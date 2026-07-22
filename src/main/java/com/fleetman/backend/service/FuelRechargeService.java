@@ -30,8 +30,9 @@ public class FuelRechargeService {
     }
 
     @Transactional
-    public FuelRechargeEntity create(FuelRechargeEntity recharge) {
+    public FuelRechargeEntity create(FuelRechargeEntity recharge, UUID managerId) {
         if (recharge.getRechargeDateTime() == null) recharge.setRechargeDateTime(Instant.now());
+        recharge.setManagerId(managerId);
         FuelRechargeEntity saved = fuelRechargeRepository.save(recharge);
 
         if (recharge.getPrice() != null) {
@@ -54,19 +55,27 @@ public class FuelRechargeService {
         return saved;
     }
 
-    public List<FuelRechargeEntity> list(UUID vehicleId) {
-        return vehicleId != null
-                ? fuelRechargeRepository.findByVehicleIdAndDeletedFalse(vehicleId)
+    public List<FuelRechargeEntity> list(UUID vehicleId, UUID managerId) {
+        List<FuelRechargeEntity> list = managerId != null
+                ? fuelRechargeRepository.findByManagerIdAndDeletedFalse(managerId)
                 : fuelRechargeRepository.findByDeletedFalse();
+        if (vehicleId != null) {
+            return list.stream().filter(f -> vehicleId.equals(f.getVehicleId())).toList();
+        }
+        return list;
     }
 
-    public FuelRechargeEntity get(UUID id) {
-        return fuelRechargeRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+    public FuelRechargeEntity get(UUID id, UUID managerId) {
+        FuelRechargeEntity r = fuelRechargeRepository.findById(id).orElseThrow(() -> OperationException.notFound(id));
+        if (managerId != null) {
+            com.fleetman.backend.controller.SecurityUtils.requireOwnership(r.getManagerId(), managerId);
+        }
+        return r;
     }
 
     @Transactional
-    public void delete(UUID id) {
-        FuelRechargeEntity r = get(id);
+    public void delete(UUID id, UUID managerId) {
+        FuelRechargeEntity r = get(id, managerId);
         r.setDeleted(true);
         r.setDeletedAt(Instant.now());
         fuelRechargeRepository.save(r);

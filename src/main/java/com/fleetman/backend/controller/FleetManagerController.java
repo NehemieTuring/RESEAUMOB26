@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,5 +36,11 @@ public class FleetManagerController {
     public ResponseEntity<FleetManagerEntity> updateCompany(Authentication auth,
                                                            @RequestBody FleetManagerEntity req) {
         return ResponseEntity.ok(service.updateCompany(SecurityUtils.getUserId(auth), req));
+    }
+
+    @PostMapping(value = "/me/company/logo", consumes = "multipart/form-data")
+    public ResponseEntity<FleetManagerEntity> uploadCompanyLogo(Authentication auth,
+                                                                @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(service.uploadCompanyLogo(SecurityUtils.getUserId(auth), file));
     }
 }

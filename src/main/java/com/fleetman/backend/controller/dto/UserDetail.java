@@ -28,5 +28,6 @@ public record UserDetail(
         String companyPhone,
         String companyAddress,
         String companyCity,
-        String companyLogoUrl
+        String companyLogoUrl,
+        UUID organizationId
 ) {}

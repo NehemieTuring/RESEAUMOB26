@@ -10,4 +10,6 @@ import java.util.*;
 @Repository
 public interface FleetRepository extends JpaRepository<FleetEntity, UUID> {
     List<FleetEntity> findByManagerId(UUID managerId);
+    @Query("SELECT f FROM FleetEntity f WHERE f.managerId IN (SELECT u.id FROM UserEntity u WHERE u.organizationId = :orgId)")
+    List<FleetEntity> findAllByOrganizationId(@Param("orgId") UUID orgId);
 }

@@ -32,8 +32,8 @@ public class TripController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TripEntity>> list(@RequestParam(required = false) UUID fleetId) {
-        return ResponseEntity.ok(tripService.list(fleetId));
+    public ResponseEntity<List<TripEntity>> list(@RequestParam(required = false) UUID fleetId, Authentication auth) {
+        return ResponseEntity.ok(tripService.list(fleetId, SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @GetMapping("/my-active")
@@ -49,58 +49,60 @@ public class TripController {
     }
 
     @GetMapping("/code/{code}")
-    public ResponseEntity<TripEntity> byCode(@PathVariable String code) {
-        return ResponseEntity.ok(tripService.getByCode(code));
+    public ResponseEntity<TripEntity> byCode(@PathVariable String code, Authentication auth) {
+        TripEntity t = tripService.getByCode(code);
+        tripService.get(t.getId(), SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)); // Ownership check
+        return ResponseEntity.ok(t);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TripEntity> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(tripService.get(id));
+    public ResponseEntity<TripEntity> get(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(tripService.get(id, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PostMapping("/return")
-    public ResponseEntity<TripEntity> registerReturn(@RequestBody RegisterReturnRequest req) {
-        return ResponseEntity.ok(tripService.registerReturn(req));
+    public ResponseEntity<TripEntity> registerReturn(@RequestBody RegisterReturnRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.registerReturn(req, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PatchMapping("/{id}/driver")
     public ResponseEntity<TripEntity> changeDriver(@PathVariable UUID id,
-                                                  @RequestBody ChangeDriverRequest req) {
-        return ResponseEntity.ok(tripService.changeDriver(id, req.newDriverId()));
+                                                  @RequestBody ChangeDriverRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.changeDriver(id, req.newDriverId(), SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<TripEntity> cancelPatch(@PathVariable UUID id,
-                                                 @RequestBody CancelTripRequest req) {
-        return ResponseEntity.ok(tripService.cancelTrip(id, req.reason()));
+                                                 @RequestBody CancelTripRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.cancelTrip(id, req.reason(), SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}/cancel")
     public ResponseEntity<TripEntity> cancelPut(@PathVariable UUID id,
-                                               @RequestBody CancelTripRequest req) {
-        return ResponseEntity.ok(tripService.cancelTrip(id, req.reason()));
+                                               @RequestBody CancelTripRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.cancelTrip(id, req.reason(), SecurityUtils.getUserId(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}/start")
-    public ResponseEntity<TripEntity> start(@PathVariable UUID id, @RequestBody StartTripRequest req) {
-        return ResponseEntity.ok(tripService.startTrip(id, req));
+    public ResponseEntity<TripEntity> start(@PathVariable UUID id, @RequestBody StartTripRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.startTrip(id, req, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}/returning")
-    public ResponseEntity<TripEntity> returning(@PathVariable UUID id) {
-        return ResponseEntity.ok(tripService.returningTrip(id));
+    public ResponseEntity<TripEntity> returning(@PathVariable UUID id, Authentication auth) {
+        return ResponseEntity.ok(tripService.returningTrip(id, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PutMapping("/{id}/complete")
     public ResponseEntity<TripEntity> complete(@PathVariable UUID id,
-                                              @RequestBody CompleteTripRequest req) {
-        return ResponseEntity.ok(tripService.completeTrip(id, req));
+                                              @RequestBody CompleteTripRequest req, Authentication auth) {
+        return ResponseEntity.ok(tripService.completeTrip(id, req, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth)));
     }
 
     @PostMapping("/{id}/telemetry")
     @PreAuthorize("hasRole('FLEET_DRIVER')")
-    public ResponseEntity<Void> telemetry(@PathVariable UUID id, @RequestBody TelemetryRequest req) {
-        tripService.telemetry(id, req);
+    public ResponseEntity<Void> telemetry(@PathVariable UUID id, @RequestBody TelemetryRequest req, Authentication auth) {
+        tripService.telemetry(id, req, SecurityUtils.getUserId(auth), SecurityUtils.isDriver(auth), SecurityUtils.isAdmin(auth), SecurityUtils.getOrganizationId(auth));
         return ResponseEntity.ok().build();
     }
 }

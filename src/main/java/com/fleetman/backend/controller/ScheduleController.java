@@ -22,28 +22,28 @@ public class ScheduleController {
     }
 
     @PostMapping
-    public ResponseEntity<ScheduleEntity> create(@RequestBody ScheduleEntity req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<ScheduleEntity> create(@RequestBody ScheduleEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping
-    public ResponseEntity<List<ScheduleEntity>> list(@RequestParam(required = false) UUID fleetId) {
-        return ResponseEntity.ok(service.list(fleetId));
+    public ResponseEntity<List<ScheduleEntity>> list(@RequestParam(required = false) UUID fleetId, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.list(fleetId, SecurityUtils.getUserId(auth)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScheduleEntity> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.get(id));
+    public ResponseEntity<ScheduleEntity> get(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.get(id, SecurityUtils.getUserId(auth)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScheduleEntity> update(@PathVariable UUID id, @RequestBody ScheduleEntity req) {
-        return ResponseEntity.ok(service.update(id, req));
+    public ResponseEntity<ScheduleEntity> update(@PathVariable UUID id, @RequestBody ScheduleEntity req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok(service.update(id, req, SecurityUtils.getUserId(auth)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, SecurityUtils.getUserId(auth));
         return ResponseEntity.noContent().build();
     }
 }

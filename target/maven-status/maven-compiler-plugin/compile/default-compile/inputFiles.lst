@@ -56,6 +56,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\ChangePasswordRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\DriverDocumentEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\service\FleetService.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\FileController.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\DiscoverContextsRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\exception\ScoringException.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\FleetStatsResponse.java
@@ -81,6 +82,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\LoginRequest.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\VehicleIllustrationImageRepository.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\dto\SelectContextRequest.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\OrganizationRepository.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\FuelRechargeEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\exception\PlanningException.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\exception\OperationException.java
@@ -125,6 +127,7 @@ F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\service\VehicleService.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\BudgetController.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\service\InternalPaymentService.java
+F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\OrganizationEntity.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\repository\UserRepository.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\controller\PaymentController.java
 F:\Semestre2Code\Réseaux\FleetMan-Backend-Monolithe\src\main\java\com\fleetman\backend\entity\UsageTypeEntity.java

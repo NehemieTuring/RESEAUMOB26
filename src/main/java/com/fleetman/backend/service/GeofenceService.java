@@ -29,25 +29,25 @@ public class GeofenceService {
     }
 
     @Transactional
-    public GeofenceZoneEntity updateZone(UUID zoneId, Map<String, Object> updates) {
-        return internalGeofenceService.updateZone(zoneId, updates);
+    public GeofenceZoneEntity updateZone(UUID zoneId, Map<String, Object> updates, UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalGeofenceService.updateZone(zoneId, updates, managerId, isAdmin, orgId);
     }
 
     @Transactional
-    public void deleteZone(UUID zoneId) {
-        internalGeofenceService.deleteZone(zoneId);
+    public void deleteZone(UUID zoneId, UUID managerId, boolean isAdmin, UUID orgId) {
+        internalGeofenceService.deleteZone(zoneId, managerId, isAdmin, orgId);
     }
 
-    public List<GeofenceZoneEntity> getZonesByManager(UUID managerId) {
-        return internalGeofenceService.getZonesByManager(managerId);
+    public List<GeofenceZoneEntity> getZonesByManager(UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalGeofenceService.getZonesByManager(managerId, isAdmin, orgId);
     }
 
-    public List<GeofenceZoneEntity> listZones(String category) {
-        return internalGeofenceService.listZones(category);
+    public List<GeofenceZoneEntity> listZones(String category, UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalGeofenceService.listZones(category, managerId, isAdmin, orgId);
     }
 
-    public boolean checkPointInZone(UUID zoneId, double lat, double lng) {
-        return internalGeofenceService.checkPointInZone(zoneId, lat, lng);
+    public boolean checkPointInZone(UUID zoneId, double lat, double lng, UUID managerId, boolean isAdmin, UUID orgId) {
+        return internalGeofenceService.checkPointInZone(zoneId, lat, lng, managerId, isAdmin, orgId);
     }
 
     public List<GeofenceEventEntity> eventsByVehicle(UUID vehicleId) {

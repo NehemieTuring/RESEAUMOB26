@@ -29,6 +29,7 @@ com\fleetman\backend\service\DocumentService.class
 com\fleetman\backend\entity\ScheduleEntity.class
 com\fleetman\backend\service\ScheduleService.class
 com\fleetman\backend\controller\GeofenceController.class
+com\fleetman\backend\entity\OrganizationEntity$OrganizationEntityBuilder.class
 com\fleetman\backend\entity\UsageTypeEntity.class
 com\fleetman\backend\service\InternalPaymentService.class
 com\fleetman\backend\controller\dto\CreateTripRequest$TripDetailRequest.class
@@ -36,6 +37,7 @@ com\fleetman\backend\service\FuelRechargeService.class
 com\fleetman\backend\repository\BudgetRepository.class
 com\fleetman\backend\service\VehicleTypeService.class
 com\fleetman\backend\entity\GeofencePointZoneLinkageEntity$LinkageId.class
+com\fleetman\backend\entity\OrganizationEntity.class
 com\fleetman\backend\repository\FuelTypeRepository.class
 com\fleetman\backend\controller\dto\UpdateDriverRequest.class
 com\fleetman\backend\entity\FuelTypeEntity.class
@@ -113,6 +115,7 @@ com\fleetman\backend\entity\ExpenseEntity.class
 com\fleetman\backend\repository\DriverScoreRepository.class
 com\fleetman\backend\repository\SubscriptionPlanRepository.class
 com\fleetman\backend\service\DriverScoringService.class
+com\fleetman\backend\repository\OrganizationRepository.class
 com\fleetman\backend\service\InternalNotificationService.class
 com\fleetman\backend\repository\NotificationSettingRepository.class
 com\fleetman\backend\controller\SubscriptionPlanController.class
@@ -229,6 +232,7 @@ com\fleetman\backend\controller\dto\VehicleRequest.class
 com\fleetman\backend\controller\DriverController.class
 com\fleetman\backend\entity\ExpenseEntity$ExpenseEntityBuilder.class
 com\fleetman\backend\service\GeofenceService.class
+com\fleetman\backend\controller\FileController.class
 com\fleetman\backend\entity\SubscriptionPlanEntity$SubscriptionPlanEntityBuilder.class
 com\fleetman\backend\entity\OperationalParameterEntity$OperationalParameterEntityBuilder.class
 com\fleetman\backend\repository\MaintenancePlanRepository.class
