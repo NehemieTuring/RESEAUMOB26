@@ -150,6 +150,7 @@ public class DriverService {
         if (driver.getAssignedVehicleId() != null && !driver.getAssignedVehicleId().equals(vehicleId)) {
             vehicleRepository.findById(driver.getAssignedVehicleId()).ifPresent(oldV -> {
                 oldV.setCurrentDriverId(null);
+                oldV.setStatus("AVAILABLE");
                 vehicleRepository.save(oldV);
             });
         }
@@ -164,6 +165,7 @@ public class DriverService {
         driver.setAssignedVehicleId(vehicleId);
         driverRepository.save(driver);
         vehicle.setCurrentDriverId(userId);
+        vehicle.setStatus("OCCUPIED");
         vehicleRepository.save(vehicle);
     }
 
@@ -175,6 +177,7 @@ public class DriverService {
         if (vehicleId != null) {
             vehicleRepository.findById(vehicleId).ifPresent(v -> {
                 v.setCurrentDriverId(null);
+                v.setStatus("AVAILABLE");
                 vehicleRepository.save(v);
             });
         }

@@ -84,4 +84,11 @@ public class VehicleEntity {
 
     @Column(name = "deleted_at")
     private java.time.Instant deletedAt;
+
+    public String getStatus() {
+        if (currentDriverId != null && "AVAILABLE".equals(this.status)) {
+            return "OCCUPIED";
+        }
+        return this.status;
+    }
 }
