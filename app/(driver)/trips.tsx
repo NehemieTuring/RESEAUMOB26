@@ -7,31 +7,49 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/context/ThemeContext';
 import { DashboardHeader, Card, Button } from '../../src/components';
 import { useRouter } from 'expo-router';
+import { tripApi } from '../../src/services/tripApi';
 
 export default function DriverTripsScreen() {
   const { colors, isDarkMode } = useTheme();
   const { t } = useTranslation();
-  const router = useRouter();
-  
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTrip, setActiveTrip] = useState<any>(null);
+  const [tripsHistory, setTripsHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const activeTrip = {
-    id: 1,
-    reference: 'TRP-2024-001',
-    startLocation: 'Dépôt Central',
-    endLocation: 'Client Alpha',
-    status: 'IN_PROGRESS',
-    startTime: '10:00',
+  const loadData = async () => {
+    try {
+        const [active, history] = await Promise.all([
+            tripApi.myActive().catch(() => null),
+            tripApi.myHistory().catch(() => [])
+        ]);
+        setActiveTrip(active);
+        setTripsHistory(history);
+    } catch (err) {
+        console.error('Error loading trips for driver:', err);
+    } finally {
+        setIsLoading(false);
+        setRefreshing(false);
+    }
   };
 
-  const tripsHistory = [
-    { id: 2, reference: 'TRP-2024-002', date: '12 Oct 2024', time: '14:00 - 16:30', status: 'COMPLETED' },
-    { id: 3, reference: 'TRP-2024-003', date: '11 Oct 2024', time: '09:00 - 11:15', status: 'COMPLETED' },
-  ];
+  React.useEffect(() => {
+      loadData();
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    loadData();
+  };
+
+  const handleCompleteTrip = async () => {
+      if (!activeTrip) return;
+      try {
+          await tripApi.complete(activeTrip.id);
+          loadData();
+      } catch (err) {
+          console.error(err);
+      }
   };
 
   return (
@@ -46,9 +64,7 @@ export default function DriverTripsScreen() {
       <DashboardHeader showSearch={false} />
       
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+
         <Text style={[styles.title, { color: colors.textPrimary }]}>Mes Trajets</Text>
       </View>
 
@@ -61,7 +77,7 @@ export default function DriverTripsScreen() {
         {activeTrip ? (
           <Card style={styles.activeTripCard}>
             <View style={styles.tripHeader}>
-              <Text style={[styles.tripRef, { color: colors.textPrimary }]}>{activeTrip.reference}</Text>
+              <Text style={[styles.tripRef, { color: colors.textPrimary }]}>{activeTrip.tripCode || 'Trajet actuel'}</Text>
               <View style={[styles.badge, { backgroundColor: colors.primaryBlue + '20' }]}>
                 <Text style={[styles.badgeText, { color: colors.primaryBlue }]}>En cours</Text>
               </View>
@@ -70,33 +86,35 @@ export default function DriverTripsScreen() {
             <View style={styles.tripRoute}>
               <View style={styles.routeNode}>
                 <Ionicons name="radio-button-on" size={16} color={colors.primaryBlue} />
-                <Text style={[styles.routeText, { color: colors.textPrimary }]}>{activeTrip.startLocation}</Text>
+                <Text style={[styles.routeText, { color: colors.textPrimary }]}>{activeTrip.departureLocation || 'Lieu de départ'}</Text>
               </View>
               <View style={[styles.routeLine, { borderLeftColor: colors.borderGlass }]} />
               <View style={styles.routeNode}>
                 <Ionicons name="location" size={16} color={colors.errorText} />
-                <Text style={[styles.routeText, { color: colors.textPrimary }]}>{activeTrip.endLocation}</Text>
+                <Text style={[styles.routeText, { color: colors.textPrimary }]}>{activeTrip.missionObject || 'Mission'}</Text>
               </View>
             </View>
 
-            <Button title="Terminer le trajet" variant="primary" onPress={() => {}} style={{ marginTop: 16 }} />
+            <Button title="Terminer le trajet" variant="primary" onPress={handleCompleteTrip} style={{ marginTop: 16 }} />
           </Card>
         ) : (
-          <Button title="Démarrer un nouveau trajet" variant="primary" onPress={() => {}} style={{ marginBottom: 24 }} />
+          <Text style={{ color: colors.textMuted, marginBottom: 24 }}>Aucun trajet en cours.</Text>
         )}
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 16 }]}>Historique des trajets</Text>
         
-        {tripsHistory.map((trip) => (
+        {tripsHistory.length > 0 ? tripsHistory.map((trip) => (
           <Card key={trip.id} style={styles.historyCard}>
             <View style={styles.historyHeader}>
-              <Text style={[styles.historyDate, { color: colors.textMuted }]}>{trip.date}</Text>
-              <Text style={[styles.historyStatus, { color: colors.successText }]}>Terminé</Text>
+              <Text style={[styles.historyDate, { color: colors.textMuted }]}>{trip.startDate}</Text>
+              <Text style={[styles.historyStatus, { color: colors.successText }]}>{trip.status === 'COMPLETED' ? 'Terminé' : trip.status}</Text>
             </View>
-            <Text style={[styles.historyRef, { color: colors.textPrimary }]}>{trip.reference}</Text>
-            <Text style={[styles.historyTime, { color: colors.textSecondary }]}>{trip.time}</Text>
+            <Text style={[styles.historyRef, { color: colors.textPrimary }]}>{trip.tripCode}</Text>
+            <Text style={[styles.historyTime, { color: colors.textSecondary }]}>{trip.startTime} - {trip.endTime || 'N/A'}</Text>
           </Card>
-        ))}
+        )) : (
+            <Text style={{ color: colors.textMuted }}>Aucun historique disponible.</Text>
+        )}
 
       </ScrollView>
     </SafeAreaView>

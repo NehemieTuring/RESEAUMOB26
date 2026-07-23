@@ -74,6 +74,7 @@ export default function MoreScreen() {
             title: t('more.management'),
             items: [
                 userRole !== 'FLEET_MANAGER' ? { id: 'managers', title: t('navigation.managers'), icon: 'people', route: '/(tabs)/managers', color: colors.accentPurple || '#8b5cf6' } : null,
+                { id: 'trips', title: 'Trajets', icon: 'map', route: '/(tabs)/trips', color: colors.primaryCyan || '#06b6d4' },
                 { id: 'incidents', title: t('navigation.incidents'), icon: 'warning', route: '/(tabs)/incidents', color: colors.warningText },
                 { id: 'zones', title: t('navigation.zones'), icon: 'location', route: '/(tabs)/zones', color: colors.successText },
             ].filter((item): item is any => item !== null),

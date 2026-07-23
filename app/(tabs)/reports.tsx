@@ -564,9 +564,9 @@ export default function ReportsScreen() {
                                     ${incidentList.map(i => `
                                         <tr>
                                             <td style="font-weight: 700;">${i.incidentTitle}</td>
-                                            <td>${i.vehicleName}</td>
-                                            <td><span class="badge ${i.incidentSeverity === 'CRITICAL' || i.incidentSeverity === 'HIGH' ? 'badge-danger' : 'badge-warning'}">${i.incidentSeverity}</span></td>
-                                            <td><span class="badge ${i.incidentStatus === 'RESOLVED' ? 'badge-success' : 'badge-info'}">${i.incidentStatus}</span></td>
+                                            <td>${i.vehicleRegistration}</td>
+                                            <td><span class="badge ${i.severity === 'CRITICAL' || i.severity === 'HIGH' ? 'badge-danger' : 'badge-warning'}">${i.severity}</span></td>
+                                            <td><span class="badge ${i.status === 'RESOLVED' ? 'badge-success' : 'badge-info'}">${i.status}</span></td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -845,28 +845,28 @@ export default function ReportsScreen() {
                     emptyMessage="Aucun incident enregistré"
                 >
                     {recentIncidents.map((incident) => (
-                        <View key={incident.incidentId} style={[styles.listItem, { borderBottomColor: colors.borderGlass }]}>
+                        <View key={incident.id} style={[styles.listItem, { borderBottomColor: colors.borderGlass }]}>
                             <View style={styles.listItemContent}>
                                 <Text style={[styles.listItemTitle, { color: colors.textPrimary }]}>
                                     {incident.incidentTitle}
                                 </Text>
                                 <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>
-                                    {incident.vehicleName} • {incident.driverName}
+                                    {incident.vehicleRegistration} • {incident.driverFullName}
                                 </Text>
                             </View>
                             <View style={[styles.severityBadge, {
-                                backgroundColor: incident.incidentSeverity === 'CRITICAL' ? colors.errorText + '20' :
-                                    incident.incidentSeverity === 'HIGH' ? colors.warningText + '20' :
-                                        incident.incidentSeverity === 'MEDIUM' ? colors.primaryBlue + '20' :
+                                backgroundColor: incident.severity === 'CRITICAL' ? colors.errorText + '20' :
+                                    incident.severity === 'HIGH' ? colors.warningText + '20' :
+                                        incident.severity === 'MEDIUM' ? colors.primaryBlue + '20' :
                                             colors.successText + '20'
                             }]}>
                                 <Text style={[styles.severityText, {
-                                    color: incident.incidentSeverity === 'CRITICAL' ? colors.errorText :
-                                        incident.incidentSeverity === 'HIGH' ? colors.warningText :
-                                            incident.incidentSeverity === 'MEDIUM' ? colors.primaryBlue :
+                                    color: incident.severity === 'CRITICAL' ? colors.errorText :
+                                        incident.severity === 'HIGH' ? colors.warningText :
+                                            incident.severity === 'MEDIUM' ? colors.primaryBlue :
                                                 colors.successText
                                 }]}>
-                                    {incident.incidentSeverity}
+                                    {incident.severity}
                                 </Text>
                             </View>
                         </View>

@@ -65,6 +65,8 @@ class ApiClient {
             fetchConfig.body = isFormData ? config.body : JSON.stringify(config.body);
         }
 
+        console.log(`[API] Sending ${config.method} request to ${endpoint} with headers:`, fetchConfig.headers);
+
         // --- REAL FETCH EXECUTION ---
         // (L'interception "mock" qui court-circuitait tous les appels a ete supprimee :
         //  l'application dialogue desormais reellement avec le backend.)
@@ -116,16 +118,19 @@ class ApiClient {
     }
 
     async uploadFile<T>(endpoint: string, fileUri: string, mimeType: string, fileName: string): Promise<T> {
+        const url = `${this.baseUrl}${endpoint}`;
         const formData = new FormData();
 
         if (Platform.OS === 'web') {
-            // Sur le web, FormData exige un vrai Blob/File : un objet { uri, name, type }
-            // serait serialise en "[object Object]" et produirait un multipart invalide.
-            const res = await fetch(fileUri);
-            const blob = await res.blob();
-            formData.append('file', blob, fileName);
+            try {
+                const res = await fetch(fileUri);
+                const blob = await res.blob();
+                formData.append('file', blob, fileName);
+            } catch (e) {
+                console.error("Failed to convert fileUri to blob on web:", e);
+                throw e;
+            }
         } else {
-            // Sur iOS/Android, React Native accepte directement cet objet.
             formData.append('file', {
                 uri: fileUri,
                 name: fileName,
@@ -133,13 +138,35 @@ class ApiClient {
             } as any);
         }
 
-        // NE PAS definir Content-Type manuellement : le runtime doit generer
-        // l'en-tete avec le "boundary", sinon le serveur ne peut pas parser le corps
-        // (erreur "Failed to parse multipart servlet request").
-        return this.request<T>(endpoint, {
-            method: 'POST',
-            body: formData,
-        });
+        const headers: Record<string, string> = {};
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        // No Content-Type, fetch will add multipart/form-data with boundary
+        
+        console.log(`[API] Uploading file to ${url} with headers:`, headers);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: formData,
+            });
+
+            if (!response.ok) {
+                let errorMessage = `Erreur HTTP: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.detail || errorMessage;
+                } catch (e) {}
+                throw new Error(errorMessage);
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error(`[API ERROR] POST ${url}:`, error);
+            throw error;
+        }
     }
 }
 

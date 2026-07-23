@@ -107,15 +107,15 @@ export default function IncidentsScreen() {
 
         // Apply status filter
         if (statusFilter !== 'ALL') {
-            filtered = filtered.filter(i => i.incidentStatus === statusFilter);
+            filtered = filtered.filter(i => i.status === statusFilter);
         }
 
         // Apply search filter
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(i => {
-                const desc = (i.incidentDescription || '').toLowerCase();
-                const type = (i.incidentType || '').toLowerCase();
+                const desc = (i.description || '').toLowerCase();
+                const type = (i.type || '').toLowerCase();
                 return desc.includes(query) || type.includes(query);
             });
         }
@@ -131,15 +131,15 @@ export default function IncidentsScreen() {
     // Convert incidents to map markers
     const incidentMarkers: VehicleMarker[] = useMemo(() => {
         return filteredIncidents
-            .filter(i => i.incidentLatitude && i.incidentLongitude)
+            .filter(i => i.latitude && i.longitude)
             .map(i => ({
-                id: i.incidentId,
-                name: getTypeLabel(i.incidentType),
-                latitude: i.incidentLatitude,
-                longitude: i.incidentLongitude,
-                status: i.incidentSeverity === 'CRITICAL' || i.incidentSeverity === 'HIGH'
+                id: i.id,
+                name: getTypeLabel(i.type),
+                latitude: i.latitude,
+                longitude: i.longitude,
+                status: i.severity === 'CRITICAL' || i.severity === 'HIGH'
                     ? 'stopped'
-                    : i.incidentSeverity === 'MEDIUM'
+                    : i.severity === 'MEDIUM'
                         ? 'idle'
                         : 'moving',
             }));
@@ -378,7 +378,7 @@ export default function IncidentsScreen() {
         );
     }
 
-    const incidentsWithLocation = incidents.filter(i => i.incidentLatitude && i.incidentLongitude).length;
+    const incidentsWithLocation = incidents.filter(i => i.latitude && i.longitude).length;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.primaryDark }]} edges={['top']}>

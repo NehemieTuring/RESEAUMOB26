@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader } from '../src/components';
 import { adminApi, authApi, accountApi } from '../src/services';
-import { API_BASE_URL } from '../src/constants/Config';
+import { getApiBaseUrl } from '../src/constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Admin, GenderLabels } from '../src/types';
@@ -125,7 +125,7 @@ export default function ProfileScreen() {
                 
                 let imageUrl = updatedUser.photoUrl || newUri;
                 if (updatedUser.photoUrl && !updatedUser.photoUrl.startsWith('http')) {
-                    const baseUrl = API_BASE_URL.replace('/api', '');
+                    const baseUrl = getApiBaseUrl().replace('/api', '');
                     imageUrl = updatedUser.photoUrl.startsWith('/') ? `${baseUrl}${updatedUser.photoUrl}` : `${baseUrl}/api/v1/files/${updatedUser.photoUrl}`;
                 }
                 
@@ -183,15 +183,21 @@ export default function ProfileScreen() {
                 {/* Profile Picture Section */}
                 <View style={styles.photoSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
-                        {profileImage ? (
-                            <Image source={{ uri: profileImage }} style={styles.photo} />
-                        ) : (
-                            <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                                <Ionicons name="person-outline" size={60} color={colors.textMuted} />
+                        <View style={{ width: 120, height: 120, position: 'relative' }}>
+                            {profileImage ? (
+                                <Image 
+                                    source={{ uri: profileImage }} 
+                                    style={styles.photo} 
+                                    onError={() => setProfileImage('')}
+                                />
+                            ) : (
+                                <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                                    <Ionicons name="person-outline" size={60} color={colors.textMuted} />
+                                </View>
+                            )}
+                            <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
+                                <Ionicons name="camera" size={16} color="#fff" />
                             </View>
-                        )}
-                        <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
-                            <Ionicons name="camera" size={16} color="#fff" />
                         </View>
                     </TouchableOpacity>
                     <Text style={[styles.userName, { color: colors.textPrimary }]}>
@@ -263,6 +269,8 @@ const styles = StyleSheet.create({
     photoContainer: {
         position: 'relative',
         marginBottom: 16,
+        width: 120,
+        height: 120,
     },
     photo: {
         width: 120,

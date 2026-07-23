@@ -99,16 +99,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 if (notificationsEnabled) {
                     let count = 0;
                     if (userObj) {
-                        if (userObj.userType === 'ADMIN' || userObj.role === 'SUPER_ADMIN' || userObj.role === 'ORGANIZATION_MANAGER') {
-                            const adminId = userObj.userId || userObj.adminId;
-                            if (adminId) {
-                                count = await notificationApi.getUnreadCountByAdmin(adminId);
+                        try {
+                            const notifs = await notificationApi.getAll();
+                            if (Array.isArray(notifs)) {
+                                count = notifs.filter(n => !n.isRead).length;
                             }
-                        } else if (userObj.userType === 'FLEET_MANAGER') {
-                            const managerId = userObj.userId;
-                            if (managerId) {
-                                count = await notificationApi.getUnreadCountByManager(managerId);
-                            }
+                        } catch (err) {
+                            console.error('Failed to fetch notifications for count', err);
                         }
                     }
                     setUnreadCount(count);
@@ -205,7 +202,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {notificationsEnabled && (
-                    <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(tabs)/notifications' as any)}>
+                    <TouchableOpacity style={styles.iconButton} onPress={() => {
+                        const isDriver = userRole === 'FLEET_DRIVER';
+                        router.push(isDriver ? '/(driver)/notifications' as any : '/(tabs)/notifications' as any);
+                    }}>
                         <Ionicons name="notifications" size={22} color={colors.textSecondary} />
                         {unreadCount > 0 && (
                             <View style={[styles.notificationDot, { backgroundColor: isDarkMode ? colors.errorText : '#ef4444' }]}>

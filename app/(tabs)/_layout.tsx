@@ -101,6 +101,7 @@ export default function TabLayout() {
         }}
       />
       {/* Hidden screens */}
+      <Tabs.Screen name="trips" options={{ href: null, title: 'Trajets', headerShown: false }} />
       <Tabs.Screen name="managers" options={{ href: null, title: t('navigation.managers'), headerShown: false }} />
       <Tabs.Screen name="incidents" options={{ href: null, title: t('navigation.incidents'), headerShown: false }} />
       <Tabs.Screen name="map" options={{ href: null, title: t('navigation.map'), headerShown: false }} />

@@ -127,7 +127,9 @@ export const vehicleApi = {
     },
 
     getById: async (vehicleId: string): Promise<Vehicle> => {
-        return toApp(await apiClient.get<BackendVehicle>(`/v1/vehicles/${vehicleId}`));
+        const response = await apiClient.get<any>(`/v1/vehicles/${vehicleId}`);
+        const backendVehicle = response.vehicle ? response.vehicle : response;
+        return toApp(backendVehicle);
     },
 
     /** Vehicules d'une flotte donnee. */

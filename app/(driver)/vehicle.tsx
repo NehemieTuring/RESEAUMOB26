@@ -57,9 +57,11 @@ export default function DriverVehicleScreen() {
               fuelLevel: actualVehicle.fuelLevel || 0,
               speed: actualVehicle.speed || 0,
               odometer: actualVehicle.odometer || 0,
-              engineStatus: 'OK',
-              batteryStatus: 'OK',
-              lastMaintenance: actualVehicle.createdAt || new Date().toISOString(),
+              transmission: actualVehicle.transmissionType || 'N/A',
+              fuelType: actualVehicle.fuelType || 'N/A',
+              tankCapacity: actualVehicle.tankCapacity || 'N/A',
+              color: actualVehicle.color || 'N/A',
+              avgConsumption: actualVehicle.averageFuelConsumption || 'N/A',
               photoUrl: actualVehicle.vehiclePhotoUrl || actualVehicle.photoUrl || null
           };
 
@@ -67,8 +69,8 @@ export default function DriverVehicleScreen() {
              const opData = await apiClient.get<any>(`/v1/vehicles/${userData.vehicleId}/operational`);
              if (opData) {
                  if (opData.fuelLevel) mappedVehicle.fuelLevel = parseInt(opData.fuelLevel);
-                 if (opData.speed) mappedVehicle.speed = parseInt(opData.speed);
-                 if (opData.odometer) mappedVehicle.odometer = parseInt(opData.odometer);
+                 if (opData.currentSpeed || opData.speed) mappedVehicle.speed = parseInt(opData.currentSpeed || opData.speed);
+                 if (opData.odometerReading || opData.odometer || opData.mileage) mappedVehicle.odometer = parseInt(opData.odometerReading || opData.odometer || opData.mileage);
              }
           } catch(e) {}
 
@@ -136,29 +138,14 @@ export default function DriverVehicleScreen() {
       <DashboardHeader showSearch={false} />
       
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Véhicules</Text>
-        <View style={[styles.tabContainer, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-          <TouchableOpacity 
-            style={[styles.tab, viewMode === 'current' && [styles.activeTab, { backgroundColor: colors.primaryBlue + '20' }]]} 
-            onPress={() => setViewMode('current')}
-          >
-            <Text style={[styles.tabText, { color: viewMode === 'current' ? colors.primaryBlue : colors.textMuted }]}>Assigné</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, viewMode === 'history' && [styles.activeTab, { backgroundColor: colors.primaryBlue + '20' }]]} 
-            onPress={() => setViewMode('history')}
-          >
-            <Text style={[styles.tabText, { color: viewMode === 'history' ? colors.primaryBlue : colors.textMuted }]}>Historique</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Mon Véhicule Assigné</Text>
       </View>
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryBlue} />}
       >
-        {viewMode === 'current' ? (
-          vehicle ? (
+          {vehicle ? (
             <View>
               {/* Photo & Main Info */}
               <Card style={styles.mainCard}>
@@ -179,57 +166,28 @@ export default function DriverVehicleScreen() {
               {/* Operational Data */}
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Données Opérationnelles</Text>
               <Card style={styles.detailsCard}>
-                <InfoRow label="Type de véhicule" value={vehicle.type} icon="car-sport" />
                 <InfoRow label="Niveau Carburant" value={`${vehicle.fuelLevel}%`} icon="water" color={colors.accentOrange} />
                 <InfoRow label="Vitesse actuelle" value={`${vehicle.speed} km/h`} icon="speedometer" color={colors.primaryCyan} />
                 <InfoRow label="Kilométrage total" value={`${vehicle.odometer.toLocaleString('fr-FR')} km`} icon="map" />
+                <InfoRow label="Consommation Moyenne" value={`${vehicle.avgConsumption} L/100km`} icon="speedometer-outline" color={colors.accentOrange} />
               </Card>
 
               {/* Technical Data */}
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Informations Techniques</Text>
               <Card style={styles.detailsCard}>
                 <InfoRow label="Numéro de châssis (VIN)" value={vehicle.vin} icon="barcode" />
-                <InfoRow label="Année" value={vehicle.year} icon="calendar" />
-                <InfoRow label="État du Moteur" value={vehicle.engineStatus} icon="construct" color={vehicle.engineStatus === 'OK' ? colors.successText : colors.errorText} />
-                <InfoRow label="État Batterie" value={vehicle.batteryStatus} icon="battery-full" color={vehicle.batteryStatus === 'OK' ? colors.successText : colors.errorText} />
-                <InfoRow label="Dernière révision" value={new Date(vehicle.lastMaintenance).toLocaleDateString('fr-FR')} icon="build" />
+                <InfoRow label="Année de fabrication" value={vehicle.year} icon="calendar" />
+                <InfoRow label="Boîte de vitesse" value={vehicle.transmission} icon="construct" />
+                <InfoRow label="Type de carburant" value={vehicle.fuelType} icon="water" />
+                <InfoRow label="Capacité du réservoir" value={`${vehicle.tankCapacity} L`} icon="beaker" />
               </Card>
-              
-              <Button title="Historique des maintenances" variant="outline" onPress={() => {}} style={styles.maintenanceBtn} />
             </View>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="car-outline" size={60} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textPrimary }]}>Aucun véhicule assigné actuellement.</Text>
             </View>
-          )
-        ) : (
-          <View>
-            {history.map((item, index) => (
-              <Card key={index} style={styles.historyCard}>
-                <View style={styles.historyHeader}>
-                  <Text style={[styles.historyTitle, { color: colors.textPrimary }]}>{item.brand} {item.model}</Text>
-                  <Text style={[styles.historyPlate, { color: colors.textMuted }]}>{item.licensePlate}</Text>
-                </View>
-                <View style={[styles.historyDivider, { backgroundColor: colors.borderGlass }]} />
-                <View style={styles.historyDates}>
-                  <View>
-                    <Text style={[styles.historyLabel, { color: colors.textMuted }]}>Début d'affectation</Text>
-                    <Text style={[styles.historyValue, { color: colors.textPrimary }]}>{new Date(item.startDate).toLocaleDateString('fr-FR')}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.historyLabel, { color: colors.textMuted }]}>Fin d'affectation</Text>
-                    <Text style={[styles.historyValue, { color: colors.textPrimary }]}>{item.endDate ? new Date(item.endDate).toLocaleDateString('fr-FR') : 'En cours'}</Text>
-                  </View>
-                </View>
-                <View style={styles.historyStats}>
-                  <Ionicons name="map" size={16} color={colors.primaryBlue} style={{ marginRight: 6 }} />
-                  <Text style={[styles.historyValue, { color: colors.textPrimary }]}>Distance parcourue : {item.distance.toLocaleString('fr-FR')} km</Text>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
+          )}
       </ScrollView>
     </SafeAreaView>
   );

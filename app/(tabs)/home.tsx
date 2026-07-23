@@ -122,19 +122,9 @@ export default function HomeScreen() {
             const fleetsData = fleetsRes.status === 'fulfilled' ? fleetsRes.value || [] : [];
             const notificationsResult = notifsRes.status === 'fulfilled' ? notifsRes.value || [] : [];
 
-            // Filtrer les chauffeurs par flotte si l'utilisateur est un gestionnaire (contournement du backend qui renvoie tout)
             let driversData: any[] = [];
             try {
-                if (currentUser && currentUser.userType === 'FLEET_MANAGER') {
-                    const driversPromises = fleetsData.map((f: any) => driverApi.getAll(f.fleetId));
-                    const driversArrays = await Promise.allSettled(driversPromises);
-                    driversData = driversArrays
-                        .filter(res => res.status === 'fulfilled')
-                        .map((res: any) => res.value)
-                        .flat();
-                } else {
-                    driversData = await driverApi.getAll() || [];
-                }
+                driversData = await driverApi.getAll() || [];
             } catch (err) {
                 console.warn('Failed to fetch drivers', err);
             }

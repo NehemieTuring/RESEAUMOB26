@@ -25,6 +25,7 @@ import { DashboardHeader, FormInput, Button, ConfirmModal } from '../../src/comp
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { authApi, accountApi } from '../../src/services';
+import { getApiBaseUrl } from '../../src/constants/Config';
 
 export default function DriverProfileScreen() {
     const router = useRouter();
@@ -78,7 +79,7 @@ export default function DriverProfileScreen() {
                         
                         if (profileData.photoUrl) {
                             const path = profileData.photoUrl;
-                            const baseUrl = API_BASE_URL.replace('/api', '');
+                            const baseUrl = getApiBaseUrl().replace('/api', '');
                             const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
                             setProfileImage(imageUrl);
                             
@@ -222,15 +223,17 @@ export default function DriverProfileScreen() {
                 {/* Profile Picture Section */}
                 <View style={styles.photoSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
-                        {profileImage ? (
-                            <Image source={{ uri: profileImage }} style={styles.photo} />
-                        ) : (
-                            <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                                <Ionicons name="person-outline" size={60} color={colors.textMuted} />
+                        <View style={{ width: 120, height: 120, position: 'relative' }}>
+                            {profileImage ? (
+                                <Image source={{ uri: profileImage }} style={styles.photo} onError={() => setProfileImage('')} />
+                            ) : (
+                                <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                                    <Ionicons name="person-outline" size={60} color={colors.textMuted} />
+                                </View>
+                            )}
+                            <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
+                                <Ionicons name="camera" size={16} color="#fff" />
                             </View>
-                        )}
-                        <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
-                            <Ionicons name="camera" size={16} color="#fff" />
                         </View>
                     </TouchableOpacity>
                     <Text style={[styles.userName, { color: colors.textPrimary }]}>{user.fullName}</Text>

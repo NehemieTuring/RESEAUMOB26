@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader, OrganizationFormModal } from '../src/components';
-import { adminApi, organizationApi, authApi } from '../src/services';
+import { authApi, accountApi, organizationApi } from '../src/services';
 import { getApiBaseUrl } from '../src/constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Admin } from '../src/types';
@@ -100,7 +100,7 @@ export default function OrganizationProfileScreen() {
                 const fileName = newUri.split('/').pop() || 'org_logo.jpg';
                 const mimeType = 'image/jpeg';
                 
-                const updatedOrg = await authApi.organization.uploadCompanyLogo(newUri, mimeType, fileName);
+                const updatedOrg = await organizationApi.uploadCompanyLogo(newUri, mimeType, fileName);
                 
                 let imageUrl = updatedOrg.companyLogoUrl || newUri;
                 if (updatedOrg.companyLogoUrl && !updatedOrg.companyLogoUrl.startsWith('http')) {
@@ -164,15 +164,17 @@ export default function OrganizationProfileScreen() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.logoSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
-                        {orgLogo ? (
-                            <Image source={{ uri: orgLogo }} style={[styles.logoPlaceholder, { borderWidth: 0 }]} />
-                        ) : (
-                            <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                                <Ionicons name="business" size={60} color={colors.textMuted} />
+                        <View style={{ width: 120, height: 120, position: 'relative' }}>
+                            {orgLogo ? (
+                                <Image source={{ uri: orgLogo }} style={[styles.logoPlaceholder, { borderWidth: 0 }]} onError={() => setOrgLogo('')} />
+                            ) : (
+                                <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                                    <Ionicons name="business" size={60} color={colors.textMuted} />
+                                </View>
+                            )}
+                            <View style={[styles.editBadge, { backgroundColor: colors.primaryCyan }]}>
+                                <Ionicons name="camera" size={16} color="#fff" />
                             </View>
-                        )}
-                        <View style={[styles.editBadge, { backgroundColor: colors.primaryCyan }]}>
-                            <Ionicons name="camera" size={16} color="#fff" />
                         </View>
                     </TouchableOpacity>
                     <Text style={[styles.orgName, { color: colors.textPrimary }]}>
