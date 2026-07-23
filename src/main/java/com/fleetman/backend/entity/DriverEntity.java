@@ -37,5 +37,5 @@ public class DriverEntity {
 
     @Column(name = "deleted")
     @Builder.Default
-    private boolean deleted = false;
+    private Boolean deleted = false;
 }

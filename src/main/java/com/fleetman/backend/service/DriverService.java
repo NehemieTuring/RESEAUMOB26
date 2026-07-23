@@ -55,7 +55,14 @@ public class DriverService {
         }
         RegisterRequest register = new RegisterRequest(req.username(), req.password(), req.email(),
                 req.phone(), req.firstName(), req.lastName(), List.of("FLEET_DRIVER"));
-        AuthResponse auth = authService.register(register);
+        
+        AuthResponse auth;
+        if (orgId != null) {
+            auth = authService.registerWithOrg(register, orgId);
+        } else {
+            auth = authService.register(register);
+        }
+        
         UUID userId = auth.user().id();
 
         DriverEntity driver = driverRepository.findById(userId)
@@ -86,7 +93,7 @@ public class DriverService {
         } else if (orgId != null) {
             drivers = driverRepository.findAllByOrganizationIdAndDeletedFalse(orgId);
         } else if (userId != null) {
-            drivers = driverRepository.findByManagerIdAndDeletedFalse(userId);
+            drivers = driverRepository.findByManagerIdAndDeletedFalseOrNull(userId);
         } else {
             drivers = driverRepository.findAll();
         }
@@ -140,6 +147,20 @@ public class DriverService {
         DriverEntity driver = getEntity(userId, managerId, isAdmin, orgId);
         var vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> VehicleException.notFound(vehicleId));
+        if (driver.getAssignedVehicleId() != null && !driver.getAssignedVehicleId().equals(vehicleId)) {
+            vehicleRepository.findById(driver.getAssignedVehicleId()).ifPresent(oldV -> {
+                oldV.setCurrentDriverId(null);
+                vehicleRepository.save(oldV);
+            });
+        }
+        
+        if (vehicle.getCurrentDriverId() != null && !vehicle.getCurrentDriverId().equals(userId)) {
+            driverRepository.findById(vehicle.getCurrentDriverId()).ifPresent(oldD -> {
+                oldD.setAssignedVehicleId(null);
+                driverRepository.save(oldD);
+            });
+        }
+
         driver.setAssignedVehicleId(vehicleId);
         driverRepository.save(driver);
         vehicle.setCurrentDriverId(userId);

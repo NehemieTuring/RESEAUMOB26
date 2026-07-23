@@ -11,8 +11,9 @@ import java.util.*;
 public interface DriverRepository extends JpaRepository<DriverEntity, UUID> {
     List<DriverEntity> findByFleetId(UUID fleetId);
     List<DriverEntity> findByFleetIdIn(List<UUID> fleetIds);
-    List<DriverEntity> findByManagerIdAndDeletedFalse(UUID managerId);
-    @Query("SELECT d FROM DriverEntity d WHERE d.userId IN (SELECT u.id FROM UserEntity u WHERE u.organizationId = :orgId) AND d.deleted = false")
+    @Query("SELECT d FROM DriverEntity d WHERE d.managerId = :managerId AND (d.deleted = false OR d.deleted IS NULL)")
+    List<DriverEntity> findByManagerIdAndDeletedFalseOrNull(@Param("managerId") UUID managerId);
+    @Query("SELECT d FROM DriverEntity d WHERE d.userId IN (SELECT u.id FROM UserEntity u WHERE u.organizationId = :orgId) AND (d.deleted = false OR d.deleted IS NULL)")
     List<DriverEntity> findAllByOrganizationIdAndDeletedFalse(@Param("orgId") UUID orgId);
     Optional<DriverEntity> findByLicenceNumber(String licenceNumber);
     boolean existsByLicenceNumber(String licenceNumber);

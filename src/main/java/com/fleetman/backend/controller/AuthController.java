@@ -35,7 +35,11 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDetail> me(Authentication auth) {
-        return ResponseEntity.ok(authService.me(SecurityUtils.getUserId(auth)));
+        UUID userId = SecurityUtils.getUserId(auth);
+        if (userId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(authService.me(userId));
     }
 
     @PostMapping("/forgot-password")

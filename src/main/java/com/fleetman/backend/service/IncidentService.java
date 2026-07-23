@@ -37,14 +37,27 @@ public class IncidentService {
     }
 
     @Transactional
-    public IncidentEntity create(IncidentEntity incident, UUID managerId) {
+    public IncidentEntity create(IncidentEntity incident, UUID creatorId) {
         if (incident.getIncidentDateTime() == null) incident.setIncidentDateTime(Instant.now());
-        if (incident.getStatus() == null) incident.setStatus("OPEN");
-        incident.setManagerId(managerId);
-        IncidentEntity saved = incidentRepository.save(incident);
-
+        if (incident.getStatus() == null) incident.setStatus("REPORTED");
+        
         VehicleEntity vehicle = incident.getVehicleId() != null
                 ? vehicleRepository.findById(incident.getVehicleId()).orElse(null) : null;
+                
+        if (vehicle != null) {
+            incident.setVehicleRegistration(vehicle.getLicensePlate());
+            incident.setManagerId(vehicle.getManagerId());
+        } else {
+            incident.setManagerId(creatorId);
+        }
+        
+        if (incident.getDriverId() != null) {
+            userRepository.findById(incident.getDriverId()).ifPresent(driver -> {
+                incident.setDriverFullName(driver.getFirstName() + " " + driver.getLastName());
+            });
+        }
+        
+        IncidentEntity saved = incidentRepository.save(incident);
 
         // Notification prioritaire si gravite elevee
         if (vehicle != null && vehicle.getManagerId() != null) {
