@@ -4,9 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { tripApi, TripCreate } from '../services/tripApi';
-import { vehicleApi, Vehicle } from '../services/vehicleApi';
 import { driverApi, Driver } from '../services/driverApi';
-import { fleetApi, Fleet } from '../services/fleetApi';
 
 interface CreateTripModalProps {
     visible: boolean;
@@ -17,17 +15,12 @@ interface CreateTripModalProps {
 export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClose, onSuccess }) => {
     const { t } = useTranslation();
     const { colors } = useTheme();
-    
-    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [drivers, setDrivers] = useState<Driver[]>([]);
-    const [fleets, setFleets] = useState<Fleet[]>([]);
     
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Form state
-    const [selectedFleetId, setSelectedFleetId] = useState<string>('');
-    const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
     const [selectedDriverId, setSelectedDriverId] = useState<string>('');
     const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState<string>('08:00:00');
@@ -43,18 +36,14 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [vList, dList, fList] = await Promise.all([
-                vehicleApi.getAll(),
-                driverApi.getAll(),
-                fleetApi.getAll()
-            ]);
-            setVehicles(vList);
-            setDrivers(dList);
-            setFleets(fList);
+            const dList = await driverApi.getAll();
+            // Filter only drivers that have a vehicle assigned
+            const availableDrivers = dList.filter(d => d.assignedVehicleId);
+            setDrivers(availableDrivers);
             
-            if (fList.length > 0 && !selectedFleetId) setSelectedFleetId(fList[0].id);
-            if (vList.length > 0 && !selectedVehicleId) setSelectedVehicleId(vList[0].vehicleId);
-            if (dList.length > 0 && !selectedDriverId) setSelectedDriverId(dList[0].driverId);
+            if (availableDrivers.length > 0 && !selectedDriverId) {
+                setSelectedDriverId(availableDrivers[0].driverId);
+            }
         } catch (err) {
             console.error('Error loading data for trip creation:', err);
             Alert.alert('Erreur', 'Impossible de charger les données');
@@ -64,16 +53,20 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
     };
 
     const handleSubmit = async () => {
-        if (!selectedFleetId || !selectedVehicleId || !selectedDriverId || !startDate || !startTime) {
-            Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+        const selectedDriver = drivers.find(d => d.driverId === selectedDriverId);
+        const actualFleetId = selectedDriver?.fleetId;
+        const actualVehicleId = selectedDriver?.assignedVehicleId;
+
+        if (!actualFleetId || !actualVehicleId || !selectedDriverId || !startDate || !startTime) {
+            Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires (le conducteur choisi doit avoir une flotte et un véhicule assignés).');
             return;
         }
 
         setIsSubmitting(true);
         try {
             const payload: TripCreate = {
-                fleetId: selectedFleetId,
-                vehicleId: selectedVehicleId,
+                fleetId: actualFleetId,
+                vehicleId: actualVehicleId,
                 driverId: selectedDriverId,
                 startDate: startDate,
                 startTime: startTime,
@@ -98,7 +91,7 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={[styles.modalContent, { backgroundColor: colors.surfaceCard }]}>
                     <View style={styles.header}>
                         <Text style={[styles.title, { color: colors.textPrimary }]}>Créer un trajet</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -112,33 +105,6 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
                         </View>
                     ) : (
                         <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-                            
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Flotte</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                                {fleets.map(f => (
-                                    <TouchableOpacity 
-                                        key={f.id} 
-                                        style={[styles.chip, { backgroundColor: selectedFleetId === f.id ? colors.primaryBlue : colors.surfaceCard }]}
-                                        onPress={() => setSelectedFleetId(f.id)}
-                                    >
-                                        <Text style={{ color: selectedFleetId === f.id ? '#fff' : colors.textPrimary }}>{f.name}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
-                            <Text style={[styles.label, { color: colors.textPrimary }]}>Véhicule</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                                {vehicles.map(v => (
-                                    <TouchableOpacity 
-                                        key={v.vehicleId} 
-                                        style={[styles.chip, { backgroundColor: selectedVehicleId === v.vehicleId ? colors.primaryBlue : colors.surfaceCard }]}
-                                        onPress={() => setSelectedVehicleId(v.vehicleId)}
-                                    >
-                                        <Text style={{ color: selectedVehicleId === v.vehicleId ? '#fff' : colors.textPrimary }}>{v.vehicleRegistrationNumber}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
                             <Text style={[styles.label, { color: colors.textPrimary }]}>Conducteur</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
                                 {drivers.map(d => (
@@ -192,7 +158,7 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
                                     <Text style={styles.submitBtnText}>Créer le trajet</Text>
                                 )}
                             </TouchableOpacity>
-                            <View style={{height: 40}}/>
+                            <View style={{height: 100}}/>
                         </ScrollView>
                     )}
                 </View>

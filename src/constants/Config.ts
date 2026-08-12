@@ -5,14 +5,11 @@
 
 // List of possible backend IP addresses to try
 // Add your IPs here - the app will automatically use the first one that works
+// Pointe vers FleetMan-DES-Backend (port 8081)
 const POSSIBLE_API_HOSTS = [
-    'http://localhost:8082',          // Web/localhost
-    'http://10.0.2.2:8082',           // Android Emulator (localhost)
-    'https://reseaumob26.onrender.com', // Serveur de production (Render)
-    'http://192.168.170.96:8082',    // WiFi actuel
-    'http://192.168.79.96:8082',     // Ancien WiFi
-    'http://192.168.86.96:8082',     // Ancien WiFi
-    'http://172.16.3.122:8082',      // Réseau alternatif
+    'http://localhost:8081',        // Simulateur Web / iOS
+    'http://10.0.2.2:8081',        // Émulateur Android
+    'http://192.168.254.96:8081',  // Téléphone physique sur le même réseau Wi-Fi
 ];
 
 // Current active API URL (will be updated after detection)
@@ -24,7 +21,8 @@ const testApiConnection = async (baseUrl: string): Promise<boolean> => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
-        const response = await fetch(`${baseUrl}/api/organizations`, {
+        // Utilise l'endpoint de santé du DES-Backend pour vérifier la connexion
+        const response = await fetch(`${baseUrl}/api/v1/health/public-stats`, {
             method: 'GET',
             signal: controller.signal,
         });

@@ -55,47 +55,47 @@ export const notificationApi = {
     },
 
     // Get notification by ID
-    getById: async (notificationId: number): Promise<Notification> => {
+    getById: async (notificationId: any): Promise<Notification> => {
         return apiClient.get<Notification>(`/v1/notifications/${notificationId}`);
     },
 
     // Get notifications by fleet manager
-    getByFleetManager: async (managerId: number): Promise<Notification[]> => {
+    getByFleetManager: async (managerId: any): Promise<Notification[]> => {
         return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread notifications for fleet manager
-    getUnreadByManager: async (managerId: number): Promise<Notification[]> => {
+    getUnreadByManager: async (managerId: any): Promise<Notification[]> => {
         return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get notifications by admin
-    getByAdmin: async (adminId: number): Promise<Notification[]> => {
+    getByAdmin: async (adminId: any): Promise<Notification[]> => {
         return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread notifications for admin
-    getUnreadByAdmin: async (adminId: number): Promise<Notification[]> => {
+    getUnreadByAdmin: async (adminId: any): Promise<Notification[]> => {
         return apiClient.get<Notification[]>('/v1/notifications');
     },
 
     // Get unread count for manager
-    getUnreadCountByManager: async (managerId: number): Promise<number> => {
+    getUnreadCountByManager: async (managerId: any): Promise<number> => {
         return apiClient.get<number>('/v1/notifications');
     },
 
     // Get unread count for admin
-    getUnreadCountByAdmin: async (adminId: number): Promise<number> => {
+    getUnreadCountByAdmin: async (adminId: any): Promise<number> => {
         return apiClient.get<number>('/v1/notifications');
     },
 
     // Mark all as read for manager
-    markAllAsReadByManager: async (managerId: number): Promise<void> => {
+    markAllAsReadByManager: async (managerId: any): Promise<void> => {
         return apiClient.patch('/v1/notifications', {});
     },
 
     // Mark all as read for admin
-    markAllAsReadByAdmin: async (adminId: number): Promise<void> => {
+    markAllAsReadByAdmin: async (adminId: any): Promise<void> => {
         return apiClient.patch('/v1/notifications', {});
     },
 
@@ -110,17 +110,17 @@ export const notificationApi = {
     },
 
     // Mark as read
-    markAsRead: async (notificationId: number): Promise<Notification> => {
+    markAsRead: async (notificationId: any): Promise<Notification> => {
         return apiClient.patch<Notification>(`/v1/notifications/${notificationId}/read`, {});
     },
 
     // Update notification state
-    updateState: async (notificationId: number, state: NotificationState): Promise<Notification> => {
+    updateState: async (notificationId: any, state: NotificationState): Promise<Notification> => {
         return apiClient.put<Notification>(`/v1/notifications/${notificationId}`, { notificationState: state });
     },
 
     // Delete notification
-    delete: async (notificationId: number): Promise<void> => {
+    delete: async (notificationId: any): Promise<void> => {
         return apiClient.delete(`/v1/notifications/${notificationId}`);
     },
 };

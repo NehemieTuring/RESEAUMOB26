@@ -53,6 +53,7 @@ export interface Vehicle {
     state: string;
     fuelType: string;
     fleetId: string | null;
+    currentDriverId?: string | null;
     photoUrl?: string | null;
     createdAt?: string;
     updatedAt?: string;
@@ -103,6 +104,7 @@ const toApp = (v: BackendVehicle): Vehicle => ({
     state: v.status,
     fuelType: v.fuelType ?? '',
     fleetId: v.fleetId,
+    currentDriverId: v.currentDriverId,
     photoUrl: v.photoUrl,
 });
 

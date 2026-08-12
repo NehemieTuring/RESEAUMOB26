@@ -68,7 +68,7 @@ export default function NotificationsScreen() {
             const userStr = await AsyncStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
 
-            let data: Notification[] = [];
+            let data: any[] = [];
 
             if (user) {
                 if (user.userType === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ORGANIZATION_MANAGER') {
@@ -89,12 +89,23 @@ export default function NotificationsScreen() {
                 data = await notificationApi.getAll();
             }
 
+            // Map data from monolith format to UI format
+            const mappedData: Notification[] = data.map((item: any) => ({
+                ...item,
+                notificationId: item.id || item.notificationId,
+                notificationSubject: item.title || item.notificationSubject || 'Notification',
+                notificationContent: item.message || item.notificationContent || '',
+                notificationType: item.type || item.notificationType || 'INCIDENT_ALERT',
+                priority: item.priority || 'MEDIUM',
+                isRead: item.isRead === undefined ? (item.read || false) : item.isRead,
+            }));
+
             // If we reach here, backend is online
             setBackendOnline(true);
             setBackendError(null);
 
             // Sort by date, newest first
-            const sorted = [...data].sort((a, b) =>
+            const sorted = [...mappedData].sort((a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
             setNotifications(sorted);

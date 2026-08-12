@@ -99,6 +99,7 @@ export default function VehiclesScreen() {
             setFilteredVehicles(data);
             setFleets(fleetsData);
             setDrivers(driversData);
+            setDrivers(driversData);
         } catch (err: any) {
             console.error('Error fetching vehicles:', err);
             setError(err.message || t('common.error'));
@@ -107,6 +108,8 @@ export default function VehiclesScreen() {
             // Clear data when backend is offline
             setVehicles([]);
             setFilteredVehicles([]);
+            setFleets([]);
+            setDrivers([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -486,6 +489,7 @@ export default function VehiclesScreen() {
                     { label: 'Immatriculation', value: selectedVehicle?.vehicleRegistrationNumber, icon: 'card-outline' },
                     { label: 'Type', value: selectedVehicle?.type, icon: 'list-outline' },
                     { label: 'Flotte', value: fleets.find(f => f.fleetId === selectedVehicle?.fleetId)?.fleetName || 'Aucune flotte', icon: 'business-outline', fullWidth: true },
+                    { label: 'Conducteur assigné', value: selectedVehicle?.currentDriverId ? `${drivers.find(d => d.driverId === selectedVehicle.currentDriverId)?.driverFirstName || ''} ${drivers.find(d => d.driverId === selectedVehicle.currentDriverId)?.driverLastName || ''}`.trim() || 'Inconnu' : 'Aucun', icon: 'person-outline', fullWidth: true },
                     { label: 'N° de Châssis (VIN)', value: selectedVehicle?.vehicleIdentificationNumber, icon: 'barcode-outline', fullWidth: true },
                     { label: 'Appareil Connecté ID', value: selectedVehicle?.vehicleDeviceIdAddress, icon: 'hardware-chip-outline', fullWidth: true },
                     { label: 'État Actuel', value: selectedVehicle?.state, icon: 'flash-outline' },

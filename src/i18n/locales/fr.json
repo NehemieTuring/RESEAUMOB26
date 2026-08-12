@@ -85,7 +85,7 @@
     },
     "stats": {
         "totalVehicles": "Total Véhicules",
-        "activeVehicles": "Véhicules Actifs",
+        "activeVehicles": "Véhicules Disponibles",
         "totalDrivers": "Chauffeurs",
         "alertsToday": "Alertes",
         "totalFleets": "Flottes"

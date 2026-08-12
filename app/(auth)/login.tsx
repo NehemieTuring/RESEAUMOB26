@@ -13,7 +13,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableOpacity,
-    Alert,
     ActivityIndicator,
     TextInput,
     StatusBar,
@@ -37,6 +36,7 @@ export default function LoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+    const [loginError, setLoginError] = useState<string | null>(null);
 
     const validateForm = () => {
         const newErrors: { email?: string; password?: string } = {};
@@ -53,11 +53,8 @@ export default function LoginScreen() {
     };
 
     const handleLogin = async () => {
+        setLoginError(null);
         if (!validateForm()) {
-            const firstError = errors.email || errors.password;
-            if (firstError) {
-                Alert.alert(t('auth.login.error'), firstError);
-            }
             return;
         }
 
@@ -92,17 +89,11 @@ export default function LoginScreen() {
                     router.replace('/(tabs)/home');
                 }
             } else {
-                Alert.alert(
-                    t('auth.login.error'),
-                    t('auth.login.invalidCredentials') || response.message
-                );
+                setLoginError(response.message || t('auth.login.invalidCredentials') || 'Identifiants incorrects');
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            Alert.alert(
-                t('auth.login.error'),
-                t('auth.login.serverError') || error.message
-            );
+            setLoginError(error.message || t('auth.login.serverError') || 'Une erreur est survenue. Veuillez réessayer.');
         } finally {
             setLoading(false);
         }
@@ -154,6 +145,14 @@ export default function LoginScreen() {
                     ]}>
                         <Text style={[styles.formTitle, { color: colors.textPrimary }]}>Bon retour parmi nous</Text>
                         <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>Connectez-vous à votre compte FleetMan</Text>
+
+                        {/* Bandeau d'erreur de connexion */}
+                        {loginError && (
+                            <View style={[styles.errorBanner, { backgroundColor: colors.errorBg, borderColor: colors.errorBorder }]}>
+                                <Ionicons name="alert-circle" size={18} color={colors.errorText} />
+                                <Text style={[styles.errorBannerText, { color: colors.errorText }]}>{loginError}</Text>
+                            </View>
+                        )}
 
                         {/* Email Input */}
                         <View style={styles.inputGroup}>
@@ -291,4 +290,20 @@ const styles = StyleSheet.create({
     registerText: { fontSize: 14 },
     registerLink: { fontSize: 14, fontWeight: '600' },
     footerText: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 'auto' },
+    errorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 20,
+    },
+    errorBannerText: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '500',
+        lineHeight: 20,
+    },
 });

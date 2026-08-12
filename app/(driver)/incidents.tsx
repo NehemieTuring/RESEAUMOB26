@@ -10,7 +10,7 @@ import { DashboardHeader, Card, Button } from '../../src/components';
 import { vehicleApi, Vehicle } from '../../src/services/vehicleApi';
 import { incidentApi, IncidentCreate, IncidentType, IncidentSeverity } from '../../src/services/incidentApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import apiClient from '../../src/services/api';
 export default function DriverIncidentsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -22,6 +22,7 @@ export default function DriverIncidentsScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [driverId, setDriverId] = useState<string>('');
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -29,17 +30,38 @@ export default function DriverIncidentsScreen() {
         const userStr = await AsyncStorage.getItem('@fleetman_user_data');
         if (userStr) {
           const userData = JSON.parse(userStr);
-          setDriverId(userData.userId);
+          setDriverId(userData.id || userData.userId);
           
-          if (userData.vehicleId) {
+          let currentVehicleId = userData.vehicleId;
+          
+          try {
+            const freshDriver = await apiClient.get<any>('/v1/auth/me');
+            if (freshDriver && freshDriver.vehicleId) {
+              currentVehicleId = freshDriver.vehicleId;
+              if (currentVehicleId !== userData.vehicleId) {
+                userData.vehicleId = currentVehicleId;
+                await AsyncStorage.setItem('@fleetman_user_data', JSON.stringify(userData));
+              }
+            }
+          } catch (e) {
+            console.warn("Impossible de rafraichir le profil");
+          }
+          
+          if (currentVehicleId) {
             try {
-              const vehicle = await vehicleApi.getById(userData.vehicleId);
+              const vehicle = await vehicleApi.getById(currentVehicleId);
               setVehicles([vehicle]);
               setSelectedVehicleId(vehicle.vehicleId);
               return; // We found the assigned vehicle, stop here
             } catch (err) {
               console.error('Error fetching driver specific vehicle:', err);
             }
+          }
+
+          // If the user is a driver and has no vehicle, do not call getAll()
+          const isDriver = userData.roles?.some((r: string) => r.includes('DRIVER'));
+          if (isDriver) {
+            return;
           }
         }
         
@@ -85,9 +107,16 @@ export default function DriverIncidentsScreen() {
       }
       
       await incidentApi.create(newIncident);
-      Alert.alert('Succès', 'Votre incident a été signalé avec succès.', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      
+      // Reset form and show validation banner
+      setDescription('');
+      setIncidentType('ACCIDENT');
+      setShowSuccessBanner(true);
+      
+      setTimeout(() => {
+        setShowSuccessBanner(false);
+      }, 5000);
+      
     } catch (err) {
       console.error('Submit incident error:', err);
       Alert.alert('Erreur', 'Impossible de signaler l\'incident.');
@@ -128,6 +157,15 @@ export default function DriverIncidentsScreen() {
         showSearch={false}
       />
       
+      {showSuccessBanner && (
+        <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: colors.successText + '20', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.successText, flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.successText} />
+          <Text style={{ marginLeft: 10, color: colors.successText, fontWeight: '600', flex: 1 }}>
+            Incident soumis avec succès ! Le formulaire a été réinitialisé.
+          </Text>
+        </View>
+      )}
+      
       <View style={styles.header}>
 
         <Text style={[styles.title, { color: colors.textPrimary }]}>Signaler un incident</Text>
@@ -144,7 +182,12 @@ export default function DriverIncidentsScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Véhicule concerné</Text>
         {vehicles.length === 0 ? (
-          <Text style={{ color: colors.textMuted, marginBottom: 20 }}>Aucun véhicule disponible.</Text>
+          <View style={[styles.noVehicleAlert, { backgroundColor: colors.errorText + '15', borderColor: colors.errorText }]}>
+            <Ionicons name="warning" size={24} color={colors.errorText} />
+            <Text style={{ color: colors.errorText, marginLeft: 10, flex: 1, fontWeight: '500' }}>
+              Vous n'avez pas de véhicule assigné. Vous ne pouvez pas signaler d'incident.
+            </Text>
+          </View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll} contentContainerStyle={styles.vehicleScrollContent}>
             {vehicles.map((v) => {
@@ -183,6 +226,7 @@ export default function DriverIncidentsScreen() {
             textAlignVertical="top"
             value={description}
             onChangeText={setDescription}
+            editable={vehicles.length > 0}
           />
         </Card>
 
@@ -190,7 +234,7 @@ export default function DriverIncidentsScreen() {
           title="Soumettre le rapport" 
           onPress={handleSubmit} 
           variant="primary" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || vehicles.length === 0}
           style={styles.submitBtn} 
         />
       </ScrollView>
@@ -217,4 +261,5 @@ const styles = StyleSheet.create({
   inputCard: { padding: 16, marginBottom: 24 },
   input: { borderWidth: 1, borderRadius: 12, padding: 16, fontSize: 15, minHeight: 120 },
   submitBtn: { marginTop: 8 },
+  noVehicleAlert: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 24 },
 });

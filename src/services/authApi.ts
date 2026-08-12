@@ -1,9 +1,10 @@
 /**
  * FleetMan Mobile - Authentication & Admin API Services
- * Connecte au backend FleetMan-Backend-Monolithe (Spring Boot, prefixe /api/v1).
+ * Connecte au backend FleetMan-DES-Backend (Spring Boot reactif, port 8081, prefixe /api/v1).
  *
- * Le backend expose un login UNIFIE (/v1/auth/login) base sur un JWT :
- * il n'y a pas d'endpoints separes admin / fleet-manager / driver.
+ * IMPORTANT : Le DES-Backend enveloppe toutes ses réponses dans :
+ *   { success: boolean, message: string, data: <payload> }
+ * La fonction login() déroule ce wrapper pour extraire accessToken + user.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,7 +15,7 @@ const AUTH_TOKEN_KEY = '@fleetman_auth_token';
 const REFRESH_TOKEN_KEY = '@fleetman_refresh_token';
 const USER_DATA_KEY = '@fleetman_user_data';
 
-/** UserDetail renvoye par le backend. */
+/** UserDetail renvoyé par /api/v1/auth/me et /api/v1/auth/login du DES-Backend. */
 export interface BackendUserDetail {
     id: string;
     username: string;
@@ -22,7 +23,6 @@ export interface BackendUserDetail {
     phone: string | null;
     firstName: string;
     lastName: string;
-    service: string | null;
     roles: string[];
     permissions: string[];
     photoUrl: string | null;
@@ -31,7 +31,7 @@ export interface BackendUserDetail {
     vehicleId: string | null;
     isActive: boolean;
     lastLoginAt: string | null;
-    // Champs societe (renseignes pour les gestionnaires de flotte).
+    // Champs absents du DES-Backend (gardés pour compatibilité avec les écrans existants).
     companyPhone: string | null;
     companyAddress: string | null;
     companyCity: string | null;
@@ -39,6 +39,23 @@ export interface BackendUserDetail {
     organizationId: string | null;
 }
 
+/**
+ * Réponse brute du DES-Backend pour /v1/auth/login :
+ *   { success, message, data: { accessToken, refreshToken, user } }
+ */
+interface DESAuthData {
+    accessToken: string;
+    refreshToken: string;
+    user: BackendUserDetail;
+}
+
+interface DESAuthApiResponse {
+    success: boolean;
+    message: string;
+    data: DESAuthData;
+}
+
+/** Interface unifiée utilisée en interne après désenveloppement. */
 export interface BackendAuthResponse {
     accessToken: string;
     refreshToken: string;
@@ -108,13 +125,25 @@ export const clearSession = async (): Promise<void> => {
 // ============ AUTH API ============
 
 export const authApi = {
-    /** Login unifie : POST /v1/auth/login { identifier, password }. */
+    /**
+     * Login unifié : POST /v1/auth/login { identifier, password }.
+     * Le DES-Backend répond { success, message, data: { accessToken, refreshToken, user } }.
+     * On déroule le wrapper 'data' avant de persister la session.
+     */
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
         try {
-            const res = await apiClient.post<BackendAuthResponse>('/v1/auth/login', {
+            // La réponse brute est { success, message, data: DESAuthData }
+            const rawRes = await apiClient.postSilent<DESAuthApiResponse>('/v1/auth/login', {
                 identifier: credentials.email,
                 password: credentials.password,
             });
+
+            // Déballer le wrapper DES-Backend
+            const res: BackendAuthResponse = rawRes.data ?? (rawRes as any);
+
+            if (!res || !res.accessToken) {
+                throw new Error((rawRes as any).message || 'Réponse inattendue du serveur');
+            }
 
             await persistSession(res);
 
@@ -129,8 +158,8 @@ export const authApi = {
                 role,
                 userType: toUserType(role),
                 roles: res.user.roles,
-                organizationId: res.user.organizationId,
-                adminId: res.user.organizationId || res.user.id,
+                organizationId: (res.user as any).organizationId ?? null,
+                adminId: (res.user as any).organizationId || res.user.id,
                 profilePhotoUrl: res.user.photoUrl,
             } as LoginResponse;
         } catch (e: any) {
@@ -146,14 +175,17 @@ export const authApi = {
         }
     },
 
-    /** Profil de l'utilisateur connecte. */
+    /** Profil de l'utilisateur connecté — réponse { success, data: UserDetail }. */
     me: async (): Promise<BackendUserDetail> => {
-        return apiClient.get<BackendUserDetail>('/v1/auth/me');
+        const raw = await apiClient.get<any>('/v1/auth/me');
+        // Déballer si le backend enveloppe dans { data: ... }
+        return (raw?.data ?? raw) as BackendUserDetail;
     },
 
-    /** Rafraichit le jeton d'acces. */
+    /** Rafraichit le jeton d'accès — même format enveloppé que login. */
     refresh: async (refreshToken: string): Promise<BackendAuthResponse> => {
-        const res = await apiClient.post<BackendAuthResponse>('/v1/auth/refresh', { refreshToken });
+        const rawRes = await apiClient.postSilent<DESAuthApiResponse>('/v1/auth/refresh', { refreshToken });
+        const res: BackendAuthResponse = rawRes.data ?? (rawRes as any);
         await persistSession(res);
         return res;
     },

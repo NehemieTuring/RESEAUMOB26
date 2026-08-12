@@ -129,7 +129,7 @@ export default function HomeScreen() {
                 console.warn('Failed to fetch drivers', err);
             }
 
-            const activeVehicles = vehiclesData.filter((v: any) => v.state === 'IN_SERVICE').length;
+            const activeVehicles = vehiclesData.filter((v: any) => v.state === 'AVAILABLE' || !v.currentDriverId).length;
             const unreadNotifications = notificationsResult.filter((n: any) => !n.isRead);
 
             setStats({

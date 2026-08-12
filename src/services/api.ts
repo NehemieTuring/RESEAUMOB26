@@ -12,6 +12,7 @@ interface RequestConfig {
     headers?: Record<string, string>;
     body?: any;
     silent?: boolean; // Don't show toast for this request
+    skipGlobalErrorToast?: boolean; // Ne pas afficher le toast global d'erreur (ex: login)
 }
 
 class ApiClient {
@@ -77,12 +78,23 @@ class ApiClient {
             // Check if response is ok
             if (!response.ok) {
                 let errorMessage = `Erreur HTTP: ${response.status}`;
+                let serverMessage: string | null = null;
                 try {
                     const errorData = await response.json();
-                    errorMessage = errorData.message || errorData.detail || errorMessage;
+                    serverMessage = errorData.message || errorData.detail || null;
+                    errorMessage = serverMessage || errorMessage;
                 } catch (e) {
                     // response is not json
                 }
+
+                // Afficher le toast global SEULEMENT si ce n'est pas un appel silencieux
+                // et SEULEMENT si ce n'est pas une page de login (skipGlobalErrorToast)
+                if (!config.skipGlobalErrorToast && !config.silent) {
+                    if (response.status === 401) {
+                        showGlobalToast('Votre session a expiré. Veuillez vous reconnecter.', 'error');
+                    }
+                }
+
                 throw new Error(errorMessage);
             }
 
@@ -103,6 +115,12 @@ class ApiClient {
 
     async post<T>(endpoint: string, body?: any): Promise<T> {
         return this.request<T>(endpoint, { method: 'POST', body });
+    }
+
+    /** Même que post() mais sans déclencher le toast d'erreur global.
+     *  À utiliser pour les appels de login / refresh où un 401 est attendu. */
+    async postSilent<T>(endpoint: string, body?: any): Promise<T> {
+        return this.request<T>(endpoint, { method: 'POST', body, skipGlobalErrorToast: true });
     }
 
     async put<T>(endpoint: string, body?: any): Promise<T> {

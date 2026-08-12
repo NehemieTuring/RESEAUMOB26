@@ -156,11 +156,30 @@ export default function ZonesScreen() {
     }));
 
     // Handle map press for geofence creation
+    const sortPointsToFormSimplePolygon = (points: LatLng[]) => {
+        if (points.length < 3) return points;
+        
+        let centerLat = 0;
+        let centerLng = 0;
+        points.forEach(p => {
+            centerLat += p.latitude;
+            centerLng += p.longitude;
+        });
+        centerLat /= points.length;
+        centerLng /= points.length;
+        
+        return [...points].sort((a, b) => {
+            const angleA = Math.atan2(a.latitude - centerLat, a.longitude - centerLng);
+            const angleB = Math.atan2(b.latitude - centerLat, b.longitude - centerLng);
+            return angleA - angleB;
+        });
+    };
+
     const handleMapPress = (coordinate: LatLng) => {
         if (creationMode === 'CIRCLE') {
             setTempCenter(coordinate);
         } else if (creationMode === 'POLYGON') {
-            setTempPoints(prev => [...prev, coordinate]);
+            setTempPoints(prev => sortPointsToFormSimplePolygon([...prev, coordinate]));
         }
     };
 

@@ -156,12 +156,12 @@ export default function IncidentsScreen() {
 
         setUpdatingStatus(true);
         try {
-            const updatedIncident = await incidentApi.updateStatus(incidentToChangeStatus.incidentId, newStatus);
+            const updatedIncident = await incidentApi.updateStatus(incidentToChangeStatus.id, newStatus);
 
             // Update local state
             setIncidents(prev =>
                 prev.map(inc =>
-                    inc.incidentId === updatedIncident.incidentId ? updatedIncident : inc
+                    inc.id === updatedIncident.id ? updatedIncident : inc
                 )
             );
 
@@ -196,7 +196,7 @@ export default function IncidentsScreen() {
 
         try {
             setIsDeleting(true);
-            await incidentApi.delete(incidentToDelete.incidentId);
+            await incidentApi.delete(incidentToDelete.id);
             setIsDeleteModalVisible(false);
             setIncidentToDelete(null);
             fetchIncidents(); // Refresh the list
@@ -281,39 +281,39 @@ export default function IncidentsScreen() {
         <TouchableOpacity
             style={[styles.card, {
                 backgroundColor: colors.surfaceCard,
-                borderColor: selectedIncident === item.incidentId ? colors.primaryBlue : colors.borderGlass,
+                borderColor: selectedIncident === item.id ? colors.primaryBlue : colors.borderGlass,
                 borderLeftWidth: 4,
-                borderLeftColor: getSeverityColor(item.incidentSeverity),
-                borderWidth: selectedIncident === item.incidentId ? 2 : 1,
+                borderLeftColor: getSeverityColor(item.severity),
+                borderWidth: selectedIncident === item.id ? 2 : 1,
             }]}
             activeOpacity={0.7}
-            onPress={() => setSelectedIncident(selectedIncident === item.incidentId ? null : item.incidentId)}
+            onPress={() => setSelectedIncident(selectedIncident === item.id ? null : item.id)}
         >
             <View style={styles.cardHeader}>
-                <View style={[styles.incidentIcon, { backgroundColor: getSeverityColor(item.incidentSeverity) + '20' }]}>
-                    <Ionicons name={getTypeIcon(item.incidentType)} size={24} color={getSeverityColor(item.incidentSeverity)} />
+                <View style={[styles.incidentIcon, { backgroundColor: getSeverityColor(item.severity) + '20' }]}>
+                    <Ionicons name={getTypeIcon(item.type)} size={24} color={getSeverityColor(item.severity)} />
                 </View>
                 <View style={styles.cardInfo}>
                     <View style={styles.titleRow}>
                         <Text style={[styles.cardTitle, { color: colors.textPrimary, textTransform: 'uppercase' }]}>
-                            {getTypeLabel(item.incidentType)}
+                            {getTypeLabel(item.type)}
                         </Text>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.incidentStatus) + '20' }]}>
-                            <Text style={[styles.statusText, { color: getStatusColor(item.incidentStatus), fontWeight: '800' }]}>
-                                {getStatusLabel(item.incidentStatus).toUpperCase()}
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+                            <Text style={[styles.statusText, { color: getStatusColor(item.status), fontWeight: '800' }]}>
+                                {getStatusLabel(item.status).toUpperCase()}
                             </Text>
                         </View>
                     </View>
-                    <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(item.incidentSeverity) + '20' }]}>
-                        <Text style={[styles.severityText, { color: getSeverityColor(item.incidentSeverity) }]}>
-                            {getSeverityLabel(item.incidentSeverity)}
+                    <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(item.severity) + '20' }]}>
+                        <Text style={[styles.severityText, { color: getSeverityColor(item.severity) }]}>
+                            {getSeverityLabel(item.severity)}
                         </Text>
                     </View>
                 </View>
             </View>
 
             <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
-                {item.incidentDescription}
+                {item.description}
             </Text>
 
             <View style={[styles.cardFooter, { borderTopColor: colors.borderGlass }]}>
@@ -324,7 +324,7 @@ export default function IncidentsScreen() {
                     </Text>
                 </View>
                 <View style={styles.footerActions}>
-                    {item.incidentLatitude && item.incidentLongitude && (
+                    {item.latitude && item.longitude && (
                         <View style={styles.footerItem}>
                             <Ionicons name="location-outline" size={14} color={colors.primaryBlue} />
                             <Text style={[styles.footerText, { color: colors.primaryBlue }]}>
@@ -538,10 +538,10 @@ export default function IncidentsScreen() {
                         {incidentToChangeStatus && (
                             <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.surfaceGlass }}>
                                 <Text style={{ fontSize: 12, color: colors.textMuted }}>
-                                    Incident: {getTypeLabel(incidentToChangeStatus.incidentType)}
+                                    Incident: {getTypeLabel(incidentToChangeStatus.type)}
                                 </Text>
                                 <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                                    Statut actuel: {getStatusLabel(incidentToChangeStatus.incidentStatus)}
+                                    Statut actuel: {getStatusLabel(incidentToChangeStatus.status)}
                                 </Text>
                             </View>
                         )}
@@ -555,7 +555,7 @@ export default function IncidentsScreen() {
                             </View>
                         ) : (
                             STATUS_OPTIONS.filter(opt => opt.value !== 'ALL').map((option) => {
-                                const isCurrentStatus = incidentToChangeStatus?.incidentStatus === option.value;
+                                const isCurrentStatus = incidentToChangeStatus?.status === option.value;
                                 return (
                                     <TouchableOpacity
                                         key={option.value}
@@ -671,20 +671,20 @@ export default function IncidentsScreen() {
                 }}
                 onConfirm={confirmDeleteIncident}
                 title="Supprimer l'incident"
-                message={`Voulez-vous vraiment supprimer l'incident "${incidentToDelete?.incidentTitle || incidentToDelete?.incidentType}" ? Cette action est irréversible.`}
+                message={`Voulez-vous vraiment supprimer l'incident "${incidentToDelete?.type || incidentToDelete?.type}" ? Cette action est irréversible.`}
                 confirmText="Supprimer"
                 cancelText="Annuler"
                 type="danger"
                 icon="trash"
                 requireTextConfirmation={true}
-                confirmationText={incidentToDelete?.incidentTitle || incidentToDelete?.incidentType || ''}
+                confirmationText={incidentToDelete?.type || incidentToDelete?.type || ''}
             />
 
             {/* Incident List */}
             <FlatList
                 data={filteredIncidents}
                 renderItem={renderIncidentCard}
-                keyExtractor={(item) => item.incidentId.toString()}
+                keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={[styles.listContent, showMap && { paddingTop: 8 }]}
                 ListEmptyComponent={renderEmptyState}
                 refreshControl={
