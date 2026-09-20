@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput,
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
-import { tripApi, TripCreate } from '../services/tripApi';
-import { driverApi, Driver } from '../services/driverApi';
+import { TripService as tripApi, type TripCreate } from '../api/tripService';
+import { DriverService as driverApi, type Driver } from '../api/driverService';
+import { fleetApi } from '../services/fleetApi';
+import { orgResourcesApi } from '../services/orgResourcesApi';
+import { isAdminSession } from '../api/session';
 
 interface CreateTripModalProps {
     visible: boolean;
@@ -36,7 +39,16 @@ export const CreateTripModal: React.FC<CreateTripModalProps> = ({ visible, onClo
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const dList = await driverApi.getAll();
+            let dList: Driver[] = [];
+            if (await isAdminSession()) {
+                dList = await orgResourcesApi.getDrivers();
+            } else {
+                const fleets = await fleetApi.getAll();
+                const nested = await Promise.all(
+                    fleets.map((fleet) => driverApi.getAll(fleet.fleetId).catch(() => [] as Driver[]))
+                );
+                dList = nested.flat();
+            }
             // Filter only drivers that have a vehicle assigned
             const availableDrivers = dList.filter(d => d.assignedVehicleId);
             setDrivers(availableDrivers);

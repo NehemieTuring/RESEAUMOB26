@@ -7,16 +7,17 @@
 export { default as apiClient, API_BASE_URL } from './api';
 
 // Authentication & Admin
-export { authApi, adminApi, organizationApi, accountApi } from './authApi';
+export { authApi, adminApi, organizationApi, accountApi, persistSession, restoreSession, clearSession } from './authApi';
+export { orgResourcesApi, type OrganizationSummary, type OrganizationKpis } from './orgResourcesApi';
 
 // Fleet Management
-export { vehicleApi } from './vehicleApi';
-export { driverApi } from './driverApi';
+export { VehicleService as vehicleApi } from '../api/vehicleService';
+export { DriverService as driverApi } from '../api/driverService';
 export { fleetApi } from './fleetApi';
 export { fleetManagerApi } from './fleetManagerApi';
 
 // Operations
-export { tripApi } from './tripApi';
+export { TripService as tripApi } from '../api/tripService';
 export { positionApi } from './positionApi';
 export { geofenceApi } from './geofenceApi';
 export { incidentApi } from './incidentApi';
@@ -25,10 +26,10 @@ export { fuelRechargeApi } from './fuelRechargeApi';
 export { maintenanceApi } from './maintenanceApi';
 
 // Vehicle API Types
-export type { Vehicle, VehicleCreate, VehicleUpdate, VehicleGlobalStats } from './vehicleApi';
+export type { Vehicle, VehicleCreate, VehicleUpdate, VehicleGlobalStats } from '../api/vehicleService';
 
 // Driver API Types
-export type { Driver, DriverCreate, DriverUpdate } from './driverApi';
+export type { Driver, DriverCreate, DriverUpdate } from '../api/driverService';
 
 // Fleet API Types
 export type { Fleet, FleetCreate, FleetUpdate } from './fleetApi';
@@ -41,7 +42,7 @@ export type { Incident, IncidentCreate, IncidentUpdate } from './incidentApi';
 export { IncidentSeverity, IncidentStatus, IncidentType } from './incidentApi';
 
 // Trip API Types
-export type { Trip, TripCreate, TripUpdate, TripStatus } from './tripApi';
+export type { Trip, TripCreate, TripUpdate, TripStatus } from '../api/tripService';
 
 // Position API Types
 export type { Position, PositionCreate } from './positionApi';

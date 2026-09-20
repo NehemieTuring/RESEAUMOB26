@@ -70,9 +70,9 @@ export interface IncidentUpdate {
 
 export const incidentApi = {
     // Get all incidents (or filtered by adminId)
-    getAll: async (adminId?: string): Promise<Incident[]> => {
-        const url = adminId ? '/v1/operations/incidents' : '/v1/operations/incidents';
-        return apiClient.get<Incident[]>(url);
+    getAll: async (_adminId?: string): Promise<Incident[]> => {
+        const list = await apiClient.get<Incident[]>('/v1/organization/incidents');
+        return Array.isArray(list) ? list : [];
     },
 
     // Get incident by ID

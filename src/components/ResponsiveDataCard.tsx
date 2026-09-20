@@ -66,7 +66,10 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
     const { colors, isDarkMode } = useTheme();
 
     return (
-        <View
+        <TouchableOpacity
+            activeOpacity={onPress ? 0.75 : 1}
+            disabled={!onPress}
+            onPress={onPress}
             style={[
                 styles.card,
                 {
@@ -132,7 +135,7 @@ export const ResponsiveDataCard: React.FC<ResponsiveDataCardProps> = ({
                     ))}
                 </View>
             )}
-        </View>
+        </TouchableOpacity>
     );
 };
 
@@ -143,6 +146,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
         marginVertical: 4,
         padding: 10,
+        cursor: 'pointer',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 4,

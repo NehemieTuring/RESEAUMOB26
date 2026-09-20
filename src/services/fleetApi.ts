@@ -7,14 +7,19 @@
  */
 
 import apiClient from './api';
+import { isAdminSession } from '../api/session';
 
-/** DTO renvoye par le backend. */
+/** DTO renvoye par le backend (FleetResponse). */
 export interface BackendFleet {
     id: string;
-    managerId: string;
     name: string;
     phoneNumber: string | null;
-    createdAt: string | null;
+    monthlyBudget?: number | null;
+    creationDate?: string | null;
+    managerUserId?: string | null;
+    /** Alias historique. */
+    managerId?: string | null;
+    createdAt?: string | null;
     vehicleCount: number | null;
 }
 
@@ -52,11 +57,14 @@ const toApp = (f: BackendFleet): Fleet => ({
     fleetName: f.name,
     fleetDescription: '',
     fleetType: '',
-    fleetManagerId: f.managerId,
+    fleetManagerId: f.managerUserId ?? f.managerId ?? undefined,
     vehiclesCount: f.vehicleCount ?? 0,
     isActive: true,
-    createdAt: f.createdAt ?? undefined,
+    createdAt: f.creationDate ?? f.createdAt ?? undefined,
 });
+
+const fleetsPath = async (): Promise<string> =>
+    (await isAdminSession()) ? '/v1/admin/management/fleets' : '/v1/fleets';
 
 const toBackend = (f: FleetCreate | FleetUpdate) => ({
     name: (f as FleetCreate).fleetName,
@@ -64,27 +72,30 @@ const toBackend = (f: FleetCreate | FleetUpdate) => ({
 });
 
 export const fleetApi = {
-    /** Toutes les flottes du gestionnaire connecte. */
+    /** Toutes les flottes visibles (manager : les siennes ; admin : toutes). */
     getAll: async (): Promise<Fleet[]> => {
-        const list = await apiClient.get<BackendFleet[]>('/v1/fleets');
+        const list = await apiClient.get<BackendFleet[]>(await fleetsPath());
         return (list ?? []).map(toApp);
     },
 
     getById: async (fleetId: string): Promise<Fleet> => {
-        return toApp(await apiClient.get<BackendFleet>(`/v1/fleets/${fleetId}`));
+        const base = await fleetsPath();
+        return toApp(await apiClient.get<BackendFleet>(`${base}/${fleetId}`));
     },
 
-    /** Cree une flotte (bouton "Nouvelle flotte"). */
+    /** Cree une flotte (bouton "Nouvelle flotte") — endpoint admin. */
     create: async (fleet: FleetCreate): Promise<Fleet> => {
-        return toApp(await apiClient.post<BackendFleet>('/v1/fleets', toBackend(fleet)));
+        return toApp(await apiClient.post<BackendFleet>('/v1/admin/management/fleets', toBackend(fleet)));
     },
 
     update: async (fleetId: string, fleet: FleetUpdate): Promise<Fleet> => {
-        return toApp(await apiClient.put<BackendFleet>(`/v1/fleets/${fleetId}`, toBackend(fleet)));
+        const base = await fleetsPath();
+        return toApp(await apiClient.put<BackendFleet>(`${base}/${fleetId}`, toBackend(fleet)));
     },
 
     delete: async (fleetId: string): Promise<void> => {
-        return apiClient.delete(`/v1/fleets/${fleetId}`);
+        const base = await fleetsPath();
+        return apiClient.delete(`${base}/${fleetId}`);
     },
 
     /** Statistiques d'une flotte. */
@@ -122,7 +133,7 @@ export const fleetApi = {
 
     /** Compte les flottes (le backend n'expose pas de /count dedie). */
     count: async (): Promise<number> => {
-        const list = await apiClient.get<BackendFleet[]>('/v1/fleets');
+        const list = await apiClient.get<BackendFleet[]>(await fleetsPath());
         return (list ?? []).length;
     },
 };

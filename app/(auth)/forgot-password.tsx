@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { PageHeader } from '../../src/components';
+import { authApi } from '../../src/api';
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
@@ -44,21 +45,16 @@ export default function ForgotPasswordScreen() {
 
         setLoading(true);
         try {
-            // TODO: Call API endpoint for password reset
-            // await authApi.forgotPassword(email);
-            
-            // Mock success
-            setTimeout(() => {
-                setLoading(false);
-                Alert.alert(
-                    "Succès",
-                    "Si un compte est associé à cette adresse, un email a été envoyé avec les instructions.",
-                    [{ text: "OK", onPress: () => router.back() }]
-                );
-            }, 1000);
+            await authApi.forgotPassword(email.trim().toLowerCase());
+            Alert.alert(
+                "Succès",
+                "Si un compte est associé à cette adresse, un email a été envoyé avec les instructions.",
+                [{ text: "OK", onPress: () => router.back() }]
+            );
         } catch (e: any) {
-            setLoading(false);
             Alert.alert("Erreur", e.message || "Une erreur est survenue");
+        } finally {
+            setLoading(false);
         }
     };
 

@@ -20,6 +20,8 @@ export { AssignFleetModal } from './AssignFleetModal';
 export { AssignDriverModal } from './AssignDriverModal';
 export { PageHeader } from './PageHeader';
 export { DashboardHeader } from './DashboardHeader';
+export { BellIcon } from './BellIcon';
+export { StaffTabLayout } from './StaffTabLayout';
 export { ConfirmModal } from './ConfirmModal';
 export { DataDetailsModal } from './DataDetailsModal';
 export { BackendOfflineBanner } from './BackendOfflineBanner';

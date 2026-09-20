@@ -9,26 +9,22 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { DarkColors, LightColors } from '../src/constants/Colors';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
 import { ToastProvider } from '../src/context/ToastContext';
+import { AppRefreshProvider } from '../src/context/AppRefreshContext';
 import { detectApiUrl } from '../src/constants/Config';
-import apiClient from '../src/services/api';
-import { restoreSession } from '../src/services/authApi';
+import { apiClient, ensureBrowseSession, restoreSession, setOnSessionExpired } from '../src/api';
 import '../src/i18n'; // Initialize i18n
 import { loadSavedLanguage } from '../src/i18n';
 
 export {
   ErrorBoundary,
 } from 'expo-router';
-
-export const unstable_settings = {
-  initialRouteName: 'index',
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -60,12 +56,21 @@ const FleetManLightTheme = {
   },
 };
 
+function SessionExpiredBinder() {
+  useEffect(() => {
+    setOnSessionExpired(null);
+  }, []);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const { isDarkMode, colors } = useTheme();
   const navigationTheme = isDarkMode ? FleetManDarkTheme : FleetManLightTheme;
 
   return (
     <>
+      <SessionExpiredBinder />
       <StatusBar
         barStyle={isDarkMode ? "light-content" : "dark-content"}
         backgroundColor={colors.primaryDark}
@@ -95,25 +100,55 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="home"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="(auth)"
             options={{
               headerShown: false,
             }}
           />
           <Stack.Screen
-            name="(tabs)"
+            name="manager"
             options={{
               headerShown: false,
             }}
           />
           <Stack.Screen
-            name="(driver)"
+            name="admin"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="driver"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="tabs"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="auth"
             options={{
               headerShown: false,
             }}
           />
           <Stack.Screen
             name="profile"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="organization-profile"
             options={{
               headerShown: false,
             }}
@@ -135,36 +170,40 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    ...Ionicons.font,
   });
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      // Configure API
-      detectApiUrl().then(url => {
-        apiClient.setBaseUrl(url);
-      });
-
-      // Restaure le JWT persiste pour que les appels suivants soient authentifies.
-      restoreSession();
-
-      // Load saved language preference
-      loadSavedLanguage();
-      SplashScreen.hideAsync();
-    }
+    if (!loaded) return;
+    let cancelled = false;
+    (async () => {
+      await restoreSession();
+      await ensureBrowseSession();
+      detectApiUrl().then((url) => apiClient.setBaseUrl(url));
+      await loadSavedLanguage();
+      await SplashScreen.hideAsync();
+      if (!cancelled) setReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loaded]);
 
-  if (!loaded) {
+  if (!loaded || !ready) {
     return null;
   }
 
   return (
     <ThemeProvider>
       <ToastProvider>
-        <RootLayoutNav />
+        <AppRefreshProvider>
+          <RootLayoutNav />
+        </AppRefreshProvider>
       </ToastProvider>
     </ThemeProvider>
   );

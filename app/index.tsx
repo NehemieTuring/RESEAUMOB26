@@ -21,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../src/context/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import { Button, Logo, PageHeader } from '../src/components';
+import { Button, Logo, PageHeader, BellIcon } from '../src/components';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,13 +70,13 @@ export default function WelcomeScreen() {
             userId: 1,
             email: 'admin@test.com',
             fullName: 'Test Admin',
-            role: 'SUPER_ADMIN',
-            userType: 'ADMIN',
+            role: 'FLEET_SUPER_ADMIN',
+            userType: 'FLEET_SUPER_ADMIN',
             adminId: 1,
             organizationId: 1,
         }));
         await AsyncStorage.setItem('isLoggedIn', 'true');
-        router.replace('/(tabs)/home');
+        router.replace('/admin/home');
     };
 
     const handleTestManager = async () => {
@@ -90,7 +90,7 @@ export default function WelcomeScreen() {
             organizationId: 1,
         }));
         await AsyncStorage.setItem('isLoggedIn', 'true');
-        router.replace('/(tabs)/home');
+        router.replace('/manager/home');
     };
 
     const handleTestDriver = async () => {
@@ -98,12 +98,12 @@ export default function WelcomeScreen() {
             userId: 3,
             email: 'driver@test.com',
             fullName: 'Test Driver',
-            role: 'DRIVER',
-            userType: 'DRIVER',
+            role: 'FLEET_DRIVER',
+            userType: 'FLEET_DRIVER',
             organizationId: 1,
         }));
         await AsyncStorage.setItem('isLoggedIn', 'true');
-        router.replace('/(driver)/home');
+        router.replace('/driver/home');
     };
 
     return (
@@ -162,7 +162,7 @@ export default function WelcomeScreen() {
                     </View>
                     <View style={styles.featureItem}>
                         <View style={[styles.featureIcon, { backgroundColor: colors.primaryBlue + '10', borderColor: colors.primaryBlue + '20' }]}>
-                            <Ionicons name="notifications" size={20} color={colors.primaryBlue} />
+                            <BellIcon size={20} color={colors.primaryBlue} />
                         </View>
                         <Text style={[styles.featureText, { color: colors.textSecondary }]}>{t('welcome.featureAlerts')}</Text>
                     </View>

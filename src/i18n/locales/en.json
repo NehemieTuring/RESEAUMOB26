@@ -19,7 +19,15 @@
         "back": "Back",
         "searchResults": "Search Results",
         "clear": "Clear",
-        "noResults": "No results found"
+        "noResults": "No results found",
+        "retry": "Retry"
+    },
+    "offlineBanner": {
+        "message": "Data is unavailable right now. You can keep browsing the app.",
+        "server": "The server is having a problem. Try again in a moment.",
+        "auth": "Session unavailable. Protected data is not shown.",
+        "retry": "Retry",
+        "retrying": "…"
     },
     "welcome": {
         "title": "Manage your fleet",
@@ -72,13 +80,19 @@
             "evening": "Good evening"
         },
         "title": "Dashboard",
+        "subtitleManager": "Manager view — your fleet",
+        "subtitleAdmin": "Admin view — fleet supervision",
+        "subtitleSuperAdmin": "Super Admin view — whole platform",
         "fleetOverview": "Fleet Overview",
         "quickActions": "Quick Actions",
         "addVehicle": "Add Vehicle",
         "addDriver": "Add Driver",
         "newTrip": "New Trip",
+        "newFleet": "New fleet",
+        "managers": "Managers",
         "viewReports": "View Reports",
         "recentVehicles": "Recent Vehicles",
+        "recentVehiclesPlatform": "Recent fleet (all fleets)",
         "recentAlerts": "Recent Alerts",
         "noRecentVehicles": "No recent vehicles",
         "noRecentAlerts": "No recent alerts"
@@ -88,7 +102,20 @@
         "activeVehicles": "Active Vehicles",
         "totalDrivers": "Drivers",
         "alertsToday": "Alerts",
-        "totalFleets": "Fleets"
+        "totalFleets": "Fleets",
+        "myVehicles": "My vehicles",
+        "myDrivers": "My drivers",
+        "myFleets": "My fleets",
+        "platformVehicles": "Fleet (platform)",
+        "platformDrivers": "Drivers (all)",
+        "allFleets": "All fleets"
+    },
+    "roles": {
+        "driver": "Driver",
+        "manager": "Manager",
+        "admin": "Administrator",
+        "superAdmin": "Super Admin",
+        "unknown": "Role"
     },
     "navigation": {
         "home": "Home",
@@ -133,6 +160,9 @@
     },
     "vehicles": {
         "title": "My Vehicles",
+        "titlePlatform": "Global fleet",
+        "subtitleManager": "Manage your vehicles",
+        "subtitleAdmin": "Read-only view of every fleet's vehicles",
         "search": "Search vehicle...",
         "noVehicles": "No vehicles",
         "addFirst": "Add your first vehicle",
@@ -152,6 +182,9 @@
     },
     "drivers": {
         "title": "My Drivers",
+        "titlePlatform": "All drivers",
+        "subtitleManager": "Manage your drivers",
+        "subtitleAdmin": "Drivers across all fleets",
         "search": "Search driver...",
         "noDrivers": "No drivers",
         "addFirst": "Add your first driver",
@@ -164,6 +197,8 @@
     },
     "managers": {
         "title": "Managers",
+        "subtitleAdmin": "Manage fleet managers",
+        "subtitleSuperAdmin": "Platform-wide manager supervision",
         "search": "Search manager...",
         "noManagers": "No managers",
         "addFirst": "Add your first manager",
@@ -180,10 +215,27 @@
         "organizationInfo": "ORGANIZATION",
         "editPhoto": "Change photo",
         "successUpdate": "Profile updated",
-        "errorLoading": "Unable to load profile"
+        "errorLoading": "Unable to load profile",
+        "username": "Username",
+        "accountStatus": "Account status",
+        "lastLogin": "Last login",
+        "neverConnected": "Never logged in",
+        "orgTitle": "Organization profile",
+        "orgDetails": "ORGANIZATION DETAILS",
+        "orgOwner": "Administrator",
+        "orgId": "Organization ID",
+        "managers": "Managers",
+        "fleets": "Fleets",
+        "vehicles": "Vehicles",
+        "drivers": "Drivers",
+        "logoUpdated": "Organization logo updated",
+        "logoError": "Unable to update the logo"
     },
     "fleets": {
         "title": "My Fleets",
+        "titlePlatform": "All fleets",
+        "subtitleManager": "Fleets assigned to you",
+        "subtitleAdmin": "Platform supervision — create and assign",
         "search": "Search fleet...",
         "noFleets": "No fleets",
         "addFirst": "Create your first fleet",
@@ -431,14 +483,26 @@
         "statusInactive": "Inactive",
         "contactInfo": "CONTACT INFORMATION",
         "professionalInfo": "PROFESSIONAL INFORMATION",
+        "assignmentInfo": "ASSIGNMENT",
         "email": "Email",
         "phone": "Phone",
         "address": "Address",
         "driverLicense": "Driver's license",
+        "driverStatus": "Driver status",
         "professionalCard": "Professional card",
         "membershipDate": "Membership date",
+        "approvalStatus": "Account approval",
+        "approvalApproved": "Approved",
+        "approvalPending": "Pending",
+        "approvalRejected": "Rejected",
+        "fleet": "Fleet",
+        "assignedVehicle": "Assigned vehicle",
+        "onActiveTrip": "Active trip",
+        "yes": "Yes",
+        "no": "No",
+        "noneAssigned": "None",
         "editProfile": "EDIT PROFILE",
-        "editWarning": "Only your phone and address can be edited. For other changes, contact the manager.",
+        "editWarning": "Only your phone number can be edited here. For other changes, contact the manager.",
         "saveChanges": "Save changes",
         "saveSuccess": "Your information has been updated.",
         "permissionRequired": "Permission required",
@@ -552,6 +616,7 @@
     "adminProfile": {
         "superAdmin": "SUPER ADMINISTRATOR",
         "manager": "MANAGER",
-        "admin": "ADMINISTRATOR"
+        "admin": "ADMINISTRATOR",
+        "driver": "DRIVER"
     }
 }

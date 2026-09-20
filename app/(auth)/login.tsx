@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import { authApi } from '../../src/services';
+import { authApi, homeRouteForRole, resolveFleetRole } from '../../src/api';
 import { PageHeader } from '../../src/components';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -69,7 +69,8 @@ export default function LoginScreen() {
             if (response.success) {
                 // Store user data
                 await AsyncStorage.setItem('user', JSON.stringify({
-                    userId: response.userId,
+                    userId: response.userUuid,
+                    id: response.userUuid,
                     userUuid: response.userUuid,
                     email: response.email,
                     fullName: response.fullName,
@@ -79,15 +80,18 @@ export default function LoginScreen() {
                     adminId: response.adminId,
                     organizationId: response.organizationId,
                     profilePhotoUrl: response.profilePhotoUrl,
+                    phone: (response as { phone?: string }).phone,
+                    vehicleId: response.vehicleId ?? null,
                 }));
                 await AsyncStorage.setItem('isLoggedIn', 'true');
 
-                // Redirection selon le role renvoye par le backend.
-                if (response.role === 'FLEET_DRIVER') {
-                    router.replace('/(driver)/home');
-                } else {
-                    router.replace('/(tabs)/home');
-                }
+                router.replace(
+                    homeRouteForRole(resolveFleetRole({
+                        role: response.role,
+                        userType: response.userType,
+                        roles: response.roles,
+                    }))
+                );
             } else {
                 setLoginError(response.message || t('auth.login.invalidCredentials') || 'Identifiants incorrects');
             }

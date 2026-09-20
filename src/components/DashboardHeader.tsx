@@ -3,7 +3,7 @@
  * Reusable header with search, theme toggle, and notifications
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -20,22 +20,16 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { BellIcon } from './BellIcon';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { changeLanguage, AVAILABLE_LANGUAGES } from '../i18n';
-import { adminApi, organizationApi } from '../services/authApi';
 import { notificationApi } from '../services/notificationApi';
-import authService from '../services/auth';
-import { getApiBaseUrl } from '../constants/Config';
+import { resolvePublicMediaUrl } from '../constants/Config';
+import { areaForRole, isDriver, normalizeFleetRole } from '../api/roles';
+import { useSilentRefresh } from '../hooks/useSilentRefresh';
 
-const getFullImageUrl = (url: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    const activeUrl = getApiBaseUrl();
-    const host = activeUrl.endsWith('/api') ? activeUrl.substring(0, activeUrl.length - 4) : activeUrl;
-    return url.startsWith('/') ? `${host}${url}` : `${host}/${url}`;
-};
 
 interface DashboardHeaderProps {
     searchQuery?: string;
@@ -45,7 +39,6 @@ interface DashboardHeaderProps {
     showBack?: boolean;
     onBackPress?: () => void;
     onRefresh?: () => void;
-    isRefreshing?: boolean;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -56,7 +49,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     showBack = false,
     onBackPress,
     onRefresh,
-    isRefreshing = false,
 }) => {
     const router = useRouter();
     const { t, i18n } = useTranslation();
@@ -72,62 +64,52 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         setUnreadCount(notificationCount);
     }, [notificationCount]);
 
-    useEffect(() => {
-        const fetchHeaderData = async () => {
-            try {
-                // Try to get cached user which might have organizationId
-                const userStr = await AsyncStorage.getItem('user');
-                const userObj = userStr ? JSON.parse(userStr) : null;
-                const organizationId = userObj?.organizationId;
-                const adminId = userObj?.adminId || userObj?.userId;
-                const role = userObj?.role || userObj?.userType;
-                setUserRole(role);
-                
-                if (userObj?.fullName) {
-                    const names = userObj.fullName.split(' ');
-                    setUserInitials(names.map((n: string) => n[0]).join('').substring(0, 2).toUpperCase());
-                } else if (userObj?.adminFirstName || userObj?.adminLastName) {
-                    const first = userObj.adminFirstName ? userObj.adminFirstName[0] : '';
-                    const last = userObj.adminLastName ? userObj.adminLastName[0] : '';
-                    setUserInitials((first + last).toUpperCase() || 'U');
-                }
-                setUserPhoto(userObj?.profilePhotoUrl || null);
+    const fetchHeaderData = useCallback(async () => {
+        try {
+            const userStr = await AsyncStorage.getItem('user');
+            const userObj = userStr ? JSON.parse(userStr) : null;
+            const role = normalizeFleetRole(userObj?.role || userObj?.userType);
+            setUserRole(role);
 
-                // We no longer fetch org data for the header avatar since we show user profile
-
-                // 2. Fetch Notification Count if enabled
-                if (notificationsEnabled) {
-                    let count = 0;
-                    if (userObj) {
-                        try {
-                            const notifs = await notificationApi.getAll();
-                            if (Array.isArray(notifs)) {
-                                count = notifs.filter(n => !n.isRead).length;
-                            }
-                        } catch (err) {
-                            console.error('Failed to fetch notifications for count', err);
-                        }
-                    }
-                    setUnreadCount(count);
-                }
-            } catch (error) {
-                console.error('Failed to fetch header data:', error);
+            if (userObj?.fullName) {
+                const names = userObj.fullName.split(' ');
+                setUserInitials(names.map((n: string) => n[0]).join('').substring(0, 2).toUpperCase());
+            } else if (userObj?.adminFirstName || userObj?.adminLastName) {
+                const first = userObj.adminFirstName ? userObj.adminFirstName[0] : '';
+                const last = userObj.adminLastName ? userObj.adminLastName[0] : '';
+                setUserInitials((first + last).toUpperCase() || 'U');
             }
-        };
-        fetchHeaderData();
-        
-        const subscription = DeviceEventEmitter.addListener('userProfileUpdated', fetchHeaderData);
+            setUserPhoto(userObj?.profilePhotoUrl || null);
 
-        // Refresh count every 60 seconds if notifications are enabled
-        let interval: any;
-        if (notificationsEnabled) {
-            interval = setInterval(fetchHeaderData, 60000);
+            if (notificationsEnabled) {
+                let count = 0;
+                if (userObj) {
+                    try {
+                        const notifs = await notificationApi.getAll();
+                        if (Array.isArray(notifs)) {
+                            count = notifs.filter(n => !n.isRead).length;
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch notifications for count', err);
+                    }
+                }
+                setUnreadCount(count);
+            }
+        } catch (error) {
+            console.error('Failed to fetch header data:', error);
         }
-        return () => {
-            if (interval) clearInterval(interval);
-            subscription.remove();
-        };
     }, [notificationsEnabled]);
+
+    useEffect(() => {
+        fetchHeaderData();
+        const subscription = DeviceEventEmitter.addListener('userProfileUpdated', fetchHeaderData);
+        return () => subscription.remove();
+    }, [fetchHeaderData]);
+
+    useSilentRefresh(() => {
+        fetchHeaderData();
+        onRefresh?.();
+    });
 
     const handleLanguageSelect = async (langCode: string) => {
         await changeLanguage(langCode);
@@ -135,8 +117,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     };
 
     const handleProfilePress = () => {
-        if (userRole === 'DRIVER') {
-            router.push('/(driver)/profile' as any);
+        if (isDriver(normalizeFleetRole(userRole))) {
+            router.push('/driver/profile' as any);
         } else {
             router.push('/profile' as any);
         }
@@ -175,25 +157,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             {!showSearch && <View style={{ flex: 1 }} />}
 
             <View style={styles.topBarActions}>
-                {/* Refresh Button - Always visible */}
-                <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => {
-                        if (onRefresh) {
-                            onRefresh();
-                        } else {
-                            // Default behavior: reload the current route
-                            router.replace(router.canGoBack() ? router.canGoBack as any : '/(tabs)/home' as any);
-                        }
-                    }}
-                    disabled={isRefreshing}
-                >
-                    <Ionicons
-                        name="refresh"
-                        size={22}
-                        color={isRefreshing ? colors.textMuted : colors.textSecondary}
-                    />
-                </TouchableOpacity>
                 <TouchableOpacity style={styles.iconButton} onPress={() => setShowLanguageModal(true)}>
                     <Ionicons name="globe-outline" size={22} color={colors.textSecondary} />
                     <Text style={[styles.langText, { color: colors.textSecondary }]}>{currentLanguage.toUpperCase()}</Text>
@@ -202,14 +165,19 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {notificationsEnabled && (
-                    <TouchableOpacity style={styles.iconButton} onPress={() => {
-                        const isDriver = userRole === 'FLEET_DRIVER';
-                        router.push(isDriver ? '/(driver)/notifications' as any : '/(tabs)/notifications' as any);
-                    }}>
-                        <Ionicons name="notifications" size={22} color={colors.textSecondary} />
+                    <TouchableOpacity
+                        style={styles.notificationButton}
+                        onPress={() => {
+                            const area = areaForRole(normalizeFleetRole(userRole));
+                            router.push(`/${area}/notifications` as any);
+                        }}
+                    >
+                        <BellIcon size={22} color={colors.textSecondary} />
                         {unreadCount > 0 && (
                             <View style={[styles.notificationDot, { backgroundColor: isDarkMode ? colors.errorText : '#ef4444' }]}>
-                                <Text style={[styles.notificationCount, { color: colors.white }]}>{unreadCount}</Text>
+                                <Text style={[styles.notificationCount, { color: colors.white }]}>
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </Text>
                             </View>
                         )}
                     </TouchableOpacity>
@@ -221,7 +189,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     onPress={handleProfilePress}
                 >
                     {userPhoto ? (
-                        <Image source={{ uri: getFullImageUrl(userPhoto) || userPhoto }} style={styles.orgLogo} />
+                        <Image source={{ uri: resolvePublicMediaUrl(userPhoto) || userPhoto }} style={styles.orgLogo} />
                     ) : (
                         <Text style={[styles.orgPlaceholderText, { color: colors.primaryBlue }]}>
                             {userInitials}
@@ -308,8 +276,17 @@ const styles = StyleSheet.create({
     iconButton: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         padding: 8,
         gap: 4,
+    },
+    notificationButton: {
+        position: 'relative',
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'visible',
     },
     langText: {
         fontSize: 12,
@@ -317,17 +294,20 @@ const styles = StyleSheet.create({
     },
     notificationDot: {
         position: 'absolute',
-        top: 6,
-        right: 6,
-        width: 16,
+        top: 4,
+        right: 4,
+        minWidth: 16,
         height: 16,
+        paddingHorizontal: 4,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 2,
     },
     notificationCount: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '700',
+        lineHeight: 12,
     },
     modalOverlay: {
         flex: 1,

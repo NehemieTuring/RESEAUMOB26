@@ -13,7 +13,6 @@ import {
     Image,
     ActivityIndicator,
     Alert,
-    Platform,
     DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,72 +21,108 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader } from '../src/components';
-import { adminApi, authApi, accountApi } from '../src/services';
-import { getApiBaseUrl } from '../src/constants/Config';
+import { authApi } from '../src/api';
+import { accountApi } from '../src/services';
+import { resolvePublicMediaUrl } from '../src/constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { Admin, GenderLabels } from '../src/types';
+import { roleLabelKey, resolveFleetRole } from '../src/api/roles';
+
+type AdminPersonalInfo = {
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    phone: string;
+    role: string;
+    isActive: boolean;
+    lastLoginAt: string | null;
+    photoUrl: string | null;
+};
+
+function formatLastLogin(value: string | null, locale: string, neverLabel: string): string {
+    if (!value) {
+        return neverLabel;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+    return date.toLocaleString(locale.startsWith('en') ? 'en-GB' : 'fr-FR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+}
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { t } = useTranslation();
-    const { colors, isDarkMode } = useTheme();
+    const { t, i18n } = useTranslation();
+    const { colors } = useTheme();
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<Admin | null>(null);
+    const [user, setUser] = useState<AdminPersonalInfo | null>(null);
     const [profileImage, setProfileImage] = useState<string | null>(null);
 
-    const fetchProfile = async () => {
+    const applyPhoto = (path?: string | null) => {
+        const imageUrl = resolvePublicMediaUrl(path);
+        if (imageUrl) {
+            setProfileImage(imageUrl);
+        }
+        return imageUrl;
+    };
+
+    const fetchProfile = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) {
+                setLoading(true);
+            }
             const userStr = await AsyncStorage.getItem('user');
-            if (userStr) {
-                const sessionUser = JSON.parse(userStr);
-                const adminId = sessionUser.userUuid || sessionUser.adminId || sessionUser.userId;
-                
-                // Pré-remplir avec les données de session (utile si l'API échoue ou en mode test)
+            if (!userStr) {
+                return;
+            }
+            const sessionUser = JSON.parse(userStr);
+            const names = `${sessionUser.fullName || ''}`.trim().split(/\s+/);
+            const sessionPhoto = sessionUser.profilePhotoUrl || null;
+
+            setUser({
+                firstName: sessionUser.firstName || names[0] || '',
+                lastName: sessionUser.lastName || names.slice(1).join(' '),
+                username: sessionUser.username || '',
+                email: sessionUser.email?.includes('test.com') ? '' : (sessionUser.email || ''),
+                phone: sessionUser.phone || '',
+                role: sessionUser.role || sessionUser.userType || '',
+                isActive: sessionUser.isActive !== false,
+                lastLoginAt: sessionUser.lastLoginAt || null,
+                photoUrl: sessionPhoto,
+            });
+            applyPhoto(sessionPhoto);
+
+            try {
+                const profileData = await authApi.getMe();
+                const photoUrl = profileData.photoUrl || sessionPhoto;
                 setUser({
-                    adminFirstName: sessionUser.fullName,
-                    adminEmail: sessionUser.email?.includes('test.com') ? '' : sessionUser.email,
-                    adminRole: sessionUser.role || sessionUser.userType,
-                } as any);
+                    firstName: profileData.firstName || names[0] || '',
+                    lastName: profileData.lastName || names.slice(1).join(' '),
+                    username: profileData.username || sessionUser.username || '',
+                    email: profileData.email || (sessionUser.email?.includes('test.com') ? '' : sessionUser.email) || '',
+                    phone: profileData.phone || sessionUser.phone || '',
+                    role: profileData.roles?.[0] || sessionUser.role || sessionUser.userType || '',
+                    isActive: profileData.isActive !== false,
+                    lastLoginAt: profileData.lastLoginAt || sessionUser.lastLoginAt || null,
+                    photoUrl,
+                });
+                applyPhoto(photoUrl);
 
-                if (adminId) {
-                    try {
-                        const profileData = await authApi.me();
-                        // On map les données reçues de /me vers la structure attendue par l'UI (Admin)
-                        setUser({
-                            ...profileData,
-                            adminFirstName: profileData.firstName || sessionUser.fullName,
-                            adminLastName: profileData.lastName,
-                            adminEmail: profileData.email || (sessionUser.email?.includes('test.com') ? '' : sessionUser.email),
-                            adminPhoneNumber: profileData.phone,
-                            adminRole: profileData.roles?.[0] || sessionUser.role || sessionUser.userType,
-                            personalCity: profileData.companyCity, // ou personalCity selon ce qui est dispo
-                            personalAddress: profileData.companyAddress,
-                        } as any);
-
-                        // Setup profile image
-                        if (profileData.photoUrl) {
-                            const path = profileData.photoUrl;
-                            if (path.startsWith('http')) {
-                                setProfileImage(path);
-                            } else {
-                                // API_BASE_URL a la forme "http://host:port/api"
-                                const baseUrl = API_BASE_URL.replace('/api', '');
-                                const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
-                                setProfileImage(imageUrl);
-                            }
-                            
-                            if (sessionUser.profilePhotoUrl !== profileData.photoUrl) {
-                                sessionUser.profilePhotoUrl = profileData.photoUrl;
-                                await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
-                                DeviceEventEmitter.emit('userProfileUpdated');
-                            }
-                        }
-                    } catch (apiError) {
-                        console.log('Utilisation des données de session suite à erreur API:', apiError);
-                    }
+                if (sessionUser.profilePhotoUrl !== photoUrl || sessionUser.phone !== (profileData.phone || sessionUser.phone)) {
+                    sessionUser.profilePhotoUrl = photoUrl;
+                    sessionUser.phone = profileData.phone || sessionUser.phone;
+                    sessionUser.username = profileData.username || sessionUser.username;
+                    sessionUser.firstName = profileData.firstName || sessionUser.firstName;
+                    sessionUser.lastName = profileData.lastName || sessionUser.lastName;
+                    await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
+                    DeviceEventEmitter.emit('userProfileUpdated');
                 }
+            } catch (apiError) {
+                console.log('Utilisation des données de session suite à erreur API:', apiError);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -117,19 +152,16 @@ export default function ProfileScreen() {
 
         if (!result.canceled) {
             try {
-                const newUri = result.assets[0].uri;
-                const fileName = newUri.split('/').pop() || 'profile.jpg';
-                const mimeType = 'image/jpeg';
-                
+                const asset = result.assets[0];
+                const newUri = asset.uri;
+                const rawName = asset.fileName || newUri.split('/').pop() || 'profile.jpg';
+                const fileName = rawName.includes('.') ? rawName.split('?')[0] : `${rawName.split('?')[0]}.jpg`;
+                const mimeType = asset.mimeType || 'image/jpeg';
+
                 const updatedUser = await accountApi.uploadPhoto(newUri, mimeType, fileName);
-                
-                let imageUrl = updatedUser.photoUrl || newUri;
-                if (updatedUser.photoUrl && !updatedUser.photoUrl.startsWith('http')) {
-                    const baseUrl = getApiBaseUrl().replace('/api', '');
-                    imageUrl = updatedUser.photoUrl.startsWith('/') ? `${baseUrl}${updatedUser.photoUrl}` : `${baseUrl}/api/v1/files/${updatedUser.photoUrl}`;
-                }
-                
-                setProfileImage(imageUrl);
+                const imageUrl = resolvePublicMediaUrl(updatedUser.photoUrl) || newUri;
+                setProfileImage(imageUrl.includes('?') ? imageUrl : `${imageUrl}?t=${Date.now()}`);
+                setUser((prev) => prev ? { ...prev, photoUrl: updatedUser.photoUrl } : prev);
 
                 const userStr = await AsyncStorage.getItem('user');
                 if (userStr) {
@@ -138,7 +170,7 @@ export default function ProfileScreen() {
                     await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
                     DeviceEventEmitter.emit('userProfileUpdated');
                 }
-                
+
                 Alert.alert(t('common.success'), 'Photo de profil mise à jour');
             } catch (error) {
                 console.error('Error uploading photo:', error);
@@ -147,8 +179,8 @@ export default function ProfileScreen() {
         }
     };
 
-    const InfoRow = ({ label, value, icon }: { label: string; value: string | undefined; icon: string }) => (
-        <View style={[styles.infoRow, { borderBottomColor: colors.borderGlass }]}>
+    const InfoRow = ({ label, value, icon, last }: { label: string; value: string | undefined; icon: string; last?: boolean }) => (
+        <View style={[styles.infoRow, { borderBottomColor: colors.borderGlass, borderBottomWidth: last ? 0 : 1 }]}>
             <View style={[styles.infoIconContainer, { backgroundColor: colors.primaryBlue + '15' }]}>
                 <Ionicons name={icon as any} size={18} color={colors.primaryBlue} />
             </View>
@@ -169,7 +201,7 @@ export default function ProfileScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.primaryDark }]} edges={['top']}>
-            <DashboardHeader showSearch={false} />
+            <DashboardHeader showSearch={false} onRefresh={() => fetchProfile(true)} />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -180,57 +212,57 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* Profile Picture Section */}
                 <View style={styles.photoSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
-                        <View style={{ width: 120, height: 120, position: 'relative' }}>
+                        <View style={styles.photoClip}>
                             {profileImage ? (
-                                <Image 
-                                    source={{ uri: profileImage }} 
-                                    style={styles.photo} 
-                                    onError={() => setProfileImage('')}
+                                <Image
+                                    source={{ uri: profileImage }}
+                                    style={styles.photo}
+                                    resizeMode="cover"
                                 />
                             ) : (
                                 <View style={[styles.photoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
                                     <Ionicons name="person-outline" size={60} color={colors.textMuted} />
                                 </View>
                             )}
-                            <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
-                                <Ionicons name="camera" size={16} color="#fff" />
-                            </View>
+                        </View>
+                        <View style={[styles.editBadge, { backgroundColor: colors.primaryBlue }]}>
+                            <Ionicons name="camera" size={16} color="#fff" />
                         </View>
                     </TouchableOpacity>
                     <Text style={[styles.userName, { color: colors.textPrimary }]}>
-                        {user?.adminFirstName} {user?.adminLastName}
+                        {user?.firstName} {user?.lastName}
                     </Text>
                     <Text style={[styles.userRole, { color: colors.primaryBlue }]}>
-                        {(() => {
-                            const r = (user?.adminRole || '').replace('ROLE_', '').toUpperCase();
-                            if (['SUPER_ADMIN', 'FLEET_SUPER_ADMIN'].includes(r)) return t('adminProfile.superAdmin');
-                            if (['MANAGER', 'FLEET_MANAGER', 'ORGANIZATION_MANAGER'].includes(r)) return t('adminProfile.manager');
-                            return t('adminProfile.admin');
-                        })()}
+                        {t(roleLabelKey(resolveFleetRole({
+                            role: user?.role,
+                            userType: user?.role,
+                        })))}
                     </Text>
                 </View>
 
-                {/* Personal Information Section */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('profile.personalInfo')}</Text>
                     <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                        <InfoRow label={t('form.email')} value={user?.adminEmail} icon="mail" />
-                        <InfoRow label={t('form.phone')} value={user?.adminPhoneNumber} icon="call" />
-                        <InfoRow label={t('form.idCardNumber')} value={user?.adminIdCardNumber} icon="card" />
-                        <InfoRow label={t('form.gender')} value={user?.gender ? GenderLabels[user.gender].FR : ''} icon="person" />
-                        <InfoRow label={t('form.niuAdmin')} value={user?.niu} icon="barcode" />
-                        <InfoRow label={t('form.taxNumber')} value={user?.taxNumber} icon="document-text" />
-                        <InfoRow label={t('form.city')} value={user?.personalCity} icon="location" />
-                        <InfoRow label={t('form.postalCode')} value={user?.personalPostalCode} icon="mail-open" />
-                        <InfoRow label={t('form.country')} value={user?.personalCountry} icon="globe" />
-                        <InfoRow label={t('form.address')} value={user?.personalAddress} icon="home" />
+                        <InfoRow label={t('form.firstName')} value={user?.firstName} icon="person-outline" />
+                        <InfoRow label={t('form.lastName')} value={user?.lastName} icon="person" />
+                        <InfoRow label={t('profile.username')} value={user?.username} icon="at" />
+                        <InfoRow label={t('form.email')} value={user?.email} icon="mail" />
+                        <InfoRow label={t('form.phone')} value={user?.phone} icon="call" />
+                        <InfoRow
+                            label={t('profile.accountStatus')}
+                            value={user?.isActive ? t('common.active') : t('common.inactive')}
+                            icon="shield-checkmark-outline"
+                        />
+                        <InfoRow
+                            last
+                            label={t('profile.lastLogin')}
+                            value={formatLastLogin(user?.lastLoginAt ?? null, i18n.language, t('profile.neverConnected'))}
+                            icon="time-outline"
+                        />
                     </View>
                 </View>
-
-
 
                 <View style={{ height: 40 }} />
             </ScrollView>
@@ -272,10 +304,15 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
     },
-    photo: {
+    photoClip: {
         width: 120,
         height: 120,
         borderRadius: 60,
+        overflow: 'hidden',
+    },
+    photo: {
+        width: 120,
+        height: 120,
     },
     photoPlaceholder: {
         width: 120,
@@ -292,8 +329,6 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        borderWidth: 3,
-        borderColor: '#00000000', // Transparency to look better on different bgs
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -327,7 +362,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderBottomWidth: 1,
     },
     infoIconContainer: {
         width: 40,

@@ -19,7 +19,15 @@
         "back": "Retour",
         "searchResults": "Résultats de recherche",
         "clear": "Effacer",
-        "noResults": "Aucun résultat trouvé"
+        "noResults": "Aucun résultat trouvé",
+        "retry": "Réessayer"
+    },
+    "offlineBanner": {
+        "message": "Données indisponibles pour le moment. Vous pouvez continuer à parcourir l’application.",
+        "server": "Le serveur rencontre un problème. Réessayez dans un instant.",
+        "auth": "Session indisponible. Les données protégées ne sont pas affichées.",
+        "retry": "Réessayer",
+        "retrying": "…"
     },
     "welcome": {
         "title": "Gérez votre flotte",
@@ -72,13 +80,19 @@
             "evening": "Bonsoir"
         },
         "title": "Tableau de bord",
+        "subtitleManager": "Vue Gestionnaire — votre parc",
+        "subtitleAdmin": "Vue Admin — supervision des flottes",
+        "subtitleSuperAdmin": "Vue Super Admin — toute la plateforme",
         "fleetOverview": "Aperçu de la flotte",
         "quickActions": "Actions rapides",
         "addVehicle": "Ajouter véhicule",
         "addDriver": "Ajouter chauffeur",
         "newTrip": "Nouveau trajet",
+        "newFleet": "Nouvelle flotte",
+        "managers": "Gestionnaires",
         "viewReports": "Voir rapports",
         "recentVehicles": "Véhicules récents",
+        "recentVehiclesPlatform": "Parc récent (toutes flottes)",
         "recentAlerts": "Alertes récentes",
         "noRecentVehicles": "Aucun véhicule récent",
         "noRecentAlerts": "Aucune alerte récente"
@@ -88,7 +102,20 @@
         "activeVehicles": "Véhicules Disponibles",
         "totalDrivers": "Chauffeurs",
         "alertsToday": "Alertes",
-        "totalFleets": "Flottes"
+        "totalFleets": "Flottes",
+        "myVehicles": "Mes véhicules",
+        "myDrivers": "Mes chauffeurs",
+        "myFleets": "Mes flottes",
+        "platformVehicles": "Parc (plateforme)",
+        "platformDrivers": "Chauffeurs (tous)",
+        "allFleets": "Toutes les flottes"
+    },
+    "roles": {
+        "driver": "Chauffeur",
+        "manager": "Gestionnaire",
+        "admin": "Administrateur",
+        "superAdmin": "Super Admin",
+        "unknown": "Rôle"
     },
     "navigation": {
         "home": "Accueil",
@@ -133,6 +160,9 @@
     },
     "vehicles": {
         "title": "Mes Véhicules",
+        "titlePlatform": "Parc global",
+        "subtitleManager": "Gérez votre flotte automobile",
+        "subtitleAdmin": "Lecture du parc de toutes les flottes",
         "search": "Rechercher un véhicule...",
         "noVehicles": "Aucun véhicule",
         "addFirst": "Ajoutez votre premier véhicule",
@@ -152,6 +182,9 @@
     },
     "drivers": {
         "title": "Mes Chauffeurs",
+        "titlePlatform": "Tous les chauffeurs",
+        "subtitleManager": "Gérez vos conducteurs",
+        "subtitleAdmin": "Chauffeurs de toutes les flottes",
         "search": "Rechercher un chauffeur...",
         "noDrivers": "Aucun chauffeur",
         "addFirst": "Ajoutez votre premier chauffeur",
@@ -164,6 +197,8 @@
     },
     "managers": {
         "title": "Gestionnaires",
+        "subtitleAdmin": "Gérez les gestionnaires de flottes",
+        "subtitleSuperAdmin": "Supervision des gestionnaires (plateforme)",
         "search": "Rechercher un gestionnaire...",
         "noManagers": "Aucun gestionnaire",
         "addFirst": "Ajoutez votre premier gestionnaire",
@@ -180,10 +215,27 @@
         "organizationInfo": "ORGANISATION",
         "editPhoto": "Changer la photo",
         "successUpdate": "Profil mis à jour",
-        "errorLoading": "Impossible de charger le profil"
+        "errorLoading": "Impossible de charger le profil",
+        "username": "Identifiant",
+        "accountStatus": "Statut du compte",
+        "lastLogin": "Dernière connexion",
+        "neverConnected": "Jamais connecté",
+        "orgTitle": "Profil de l'organisation",
+        "orgDetails": "DÉTAILS DE L'ORGANISATION",
+        "orgOwner": "Administrateur",
+        "orgId": "Identifiant organisation",
+        "managers": "Gestionnaires",
+        "fleets": "Flottes",
+        "vehicles": "Véhicules",
+        "drivers": "Chauffeurs",
+        "logoUpdated": "Logo de l'organisation mis à jour",
+        "logoError": "Impossible de mettre à jour le logo"
     },
     "fleets": {
         "title": "Mes Flottes",
+        "titlePlatform": "Toutes les flottes",
+        "subtitleManager": "Flottes dont vous êtes responsable",
+        "subtitleAdmin": "Supervision plateforme — création et assignation",
         "search": "Rechercher une flotte...",
         "noFleets": "Aucune flotte",
         "addFirst": "Créez votre première flotte",
@@ -220,6 +272,7 @@
         "type": {
             "ACCIDENT": "ACCIDENT",
             "BREAKDOWN": "PANNE",
+            "VANDALISM": "VANDALISME",
             "THEFT": "VOL",
             "TRAFFIC_VIOLATION": "INFRACTION",
             "WEATHER": "MÉTÉO",
@@ -452,14 +505,26 @@
         "statusInactive": "Inactif",
         "contactInfo": "INFORMATIONS DE CONTACT",
         "professionalInfo": "INFORMATIONS PROFESSIONNELLES",
+        "assignmentInfo": "AFFECTATION",
         "email": "Email",
         "phone": "Téléphone",
         "address": "Adresse",
         "driverLicense": "Permis de conduire",
+        "driverStatus": "Statut chauffeur",
         "professionalCard": "Carte professionnelle",
         "membershipDate": "Date d'adhésion",
+        "approvalStatus": "Validation du compte",
+        "approvalApproved": "Approuvé",
+        "approvalPending": "En attente",
+        "approvalRejected": "Rejeté",
+        "fleet": "Flotte",
+        "assignedVehicle": "Véhicule assigné",
+        "onActiveTrip": "Mission en cours",
+        "yes": "Oui",
+        "no": "Non",
+        "noneAssigned": "Aucun",
         "editProfile": "MODIFICATION DU PROFIL",
-        "editWarning": "Seuls votre téléphone et votre adresse sont modifiables. Pour le reste, contactez le gestionnaire.",
+        "editWarning": "Seul votre téléphone est modifiable ici. Pour le reste, contactez le gestionnaire.",
         "saveChanges": "Sauvegarder les modifications",
         "saveSuccess": "Vos informations ont été mises à jour.",
         "permissionRequired": "Permission requise",
@@ -571,8 +636,9 @@
         "orgProfile": "Profil Organisation"
     },
     "adminProfile": {
-        "superAdmin": "ADMINISTRATEUR PRINCIPAL",
+        "superAdmin": "SUPER ADMINISTRATEUR",
         "manager": "GESTIONNAIRE",
-        "admin": "ADMINISTRATEUR"
+        "admin": "ADMINISTRATEUR",
+        "driver": "CHAUFFEUR"
     }
 }

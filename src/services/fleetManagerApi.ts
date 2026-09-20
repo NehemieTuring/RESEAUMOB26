@@ -66,8 +66,10 @@ export interface FleetManagerUpdate {
     language?: Language;
 }
 
+const MANAGERS_PATH = '/v1/admin/management/managers';
+
 const toApp = (u: any): FleetManager => ({
-    managerId: u.id,
+    managerId: u.userId || u.id,
     managerFirstName: u.firstName || '',
     managerLastName: u.lastName || '',
     managerEmail: u.email || '',
@@ -82,8 +84,8 @@ const toApp = (u: any): FleetManager => ({
     niu: '',
     language: Language.FR,
     managerState: u.isActive ? 'ACTIVE' : 'INACTIVE',
-    adminId: u.organizationId || u.adminId || '',
-    adminName: '',
+    adminId: u.createdByAdminId || u.organizationId || u.adminId || '',
+    adminName: u.companyName || '',
     createdAt: '',
     lastLogin: u.lastLoginAt || '',
     isActive: !!u.isActive,
@@ -96,10 +98,10 @@ const toApp = (u: any): FleetManager => ({
 export const fleetManagerApi = {
     // Get all fleet managers
     getAll: async (adminId?: string): Promise<FleetManager[]> => {
-        const list = await apiClient.get<any[]>('/v1/admin/managers');
+        const list = await apiClient.get<any[]>(MANAGERS_PATH);
         let managers = (list || []).map(toApp);
         if (adminId) {
-            managers = managers.filter(m => m.adminId === adminId);
+            managers = managers.filter(m => !m.adminId || m.adminId === adminId);
         }
         return managers;
     },
@@ -108,21 +110,21 @@ export const fleetManagerApi = {
     getById: async (managerId: string): Promise<FleetManager> => {
         // En attendant un endpoint byId specifique dans l'AdminManagerController, 
         // on recupere la liste et on filtre.
-        const list = await apiClient.get<any[]>('/v1/admin/managers');
-        const user = (list || []).find(u => u.id === managerId);
+        const list = await apiClient.get<any[]>(MANAGERS_PATH);
+        const user = (list || []).find(u => (u.userId || u.id) === managerId);
         if (!user) throw new Error("Manager non trouvé");
         return toApp(user);
     },
 
     // Get fleet managers by admin ID
     getByAdminId: async (adminId: string): Promise<FleetManager[]> => {
-        const list = await apiClient.get<any[]>('/v1/admin/managers');
+        const list = await apiClient.get<any[]>(MANAGERS_PATH);
         return (list || []).map(toApp);
     },
 
     // Get fleet manager by email
     getByEmail: async (email: string): Promise<FleetManager> => {
-        const list = await apiClient.get<any[]>('/v1/admin/managers');
+        const list = await apiClient.get<any[]>(MANAGERS_PATH);
         const user = (list || []).find(u => u.email === email);
         if (!user) throw new Error("Manager non trouvé");
         return toApp(user);
@@ -131,7 +133,7 @@ export const fleetManagerApi = {
     // Create fleet manager (Not strictly via admin/managers, but via /auth/register-manager usually)
     create: async (adminId: string, manager: FleetManagerCreate): Promise<FleetManager> => {
         // Appelle la vraie route de création
-        return toApp(await apiClient.post<any>('/v1/admin/managers', {
+        return toApp(await apiClient.post<any>(MANAGERS_PATH, {
             username: manager.managerEmail, // Utilise l'email comme nom d'utilisateur par défaut
             password: manager.managerPassword,
             email: manager.managerEmail,
@@ -151,13 +153,12 @@ export const fleetManagerApi = {
 
     // Delete fleet manager
     delete: async (managerId: string): Promise<void> => {
-        return apiClient.delete(`/v1/admin/managers/${managerId}`);
+        return apiClient.delete(`${MANAGERS_PATH}/${managerId}`);
     },
 
     // Activate/Deactivate manager
     setActive: async (managerId: string, isActive: boolean): Promise<FleetManager> => {
-        const endpoint = isActive ? 'activate' : 'deactivate';
-        return toApp(await apiClient.post<any>(`/v1/admin/managers/${managerId}/${endpoint}`));
+        return toApp(await apiClient.patch<any>(`${MANAGERS_PATH}/${managerId}/toggle`));
     },
 };
 

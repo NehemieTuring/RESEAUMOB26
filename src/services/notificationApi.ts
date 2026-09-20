@@ -47,61 +47,106 @@ export interface NotificationCreate {
     geofenceId?: number;
 }
 
+interface BackendNotification {
+    id?: string;
+    userId?: string;
+    title?: string;
+    message?: string;
+    type?: string;
+    isRead?: boolean;
+    createdAt?: string;
+    notificationId?: string | number;
+    notificationSubject?: string;
+    notificationContent?: string;
+    notificationState?: NotificationState;
+    notificationType?: NotificationType;
+    priority?: NotificationPriority;
+    fleetManagerId?: string | number;
+}
+
+interface PagedNotifications {
+    content?: BackendNotification[];
+    totalElements?: number;
+}
+
+const toApp = (n: BackendNotification): Notification => ({
+    notificationId: (n.notificationId ?? n.id ?? '') as unknown as number,
+    notificationSubject: n.notificationSubject ?? n.title ?? '',
+    notificationContent: n.notificationContent ?? n.message ?? '',
+    notificationState: n.notificationState ?? (n.isRead ? 'READ' : 'PENDING'),
+    notificationType: (n.notificationType ?? n.type ?? 'INCIDENT_ALERT') as NotificationType,
+    priority: n.priority ?? 'MEDIUM',
+    isRead: Boolean(n.isRead),
+    createdAt: n.createdAt ?? '',
+    fleetManagerId: (n.fleetManagerId ?? n.userId ?? '') as unknown as number,
+});
+
+const unwrapList = (raw: unknown): Notification[] => {
+    if (Array.isArray(raw)) {
+        return raw.map(toApp);
+    }
+    if (raw && typeof raw === 'object' && Array.isArray((raw as PagedNotifications).content)) {
+        return (raw as PagedNotifications).content!.map(toApp);
+    }
+    return [];
+};
+
+const fetchMine = async (): Promise<Notification[]> =>
+    unwrapList(await apiClient.get<unknown>('/v1/notifications?page=0&size=50'));
+
 export const notificationApi = {
     // Get all notifications
-    getAll: async (adminId?: number): Promise<Notification[]> => {
-        const url = adminId ? '/v1/notifications' : '/v1/notifications';
-        return apiClient.get<Notification[]>(url);
-    },
+    getAll: async (_adminId?: number): Promise<Notification[]> => fetchMine(),
 
     // Get notification by ID
     getById: async (notificationId: any): Promise<Notification> => {
-        return apiClient.get<Notification>(`/v1/notifications/${notificationId}`);
+        return toApp(await apiClient.get<BackendNotification>(`/v1/notifications/${notificationId}`));
     },
 
     // Get notifications by fleet manager
-    getByFleetManager: async (managerId: any): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>('/v1/notifications');
-    },
+    getByFleetManager: async (_managerId: any): Promise<Notification[]> => fetchMine(),
 
     // Get unread notifications for fleet manager
-    getUnreadByManager: async (managerId: any): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>('/v1/notifications');
+    getUnreadByManager: async (_managerId: any): Promise<Notification[]> => {
+        const list = await fetchMine();
+        return list.filter((n) => !n.isRead);
     },
 
     // Get notifications by admin
-    getByAdmin: async (adminId: any): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>('/v1/notifications');
-    },
+    getByAdmin: async (_adminId: any): Promise<Notification[]> => fetchMine(),
 
     // Get unread notifications for admin
-    getUnreadByAdmin: async (adminId: any): Promise<Notification[]> => {
-        return apiClient.get<Notification[]>('/v1/notifications');
+    getUnreadByAdmin: async (_adminId: any): Promise<Notification[]> => {
+        const list = await fetchMine();
+        return list.filter((n) => !n.isRead);
     },
 
     // Get unread count for manager
-    getUnreadCountByManager: async (managerId: any): Promise<number> => {
-        return apiClient.get<number>('/v1/notifications');
+    getUnreadCountByManager: async (_managerId: any): Promise<number> => {
+        const list = await fetchMine();
+        return list.filter((n) => !n.isRead).length;
     },
 
     // Get unread count for admin
-    getUnreadCountByAdmin: async (adminId: any): Promise<number> => {
-        return apiClient.get<number>('/v1/notifications');
+    getUnreadCountByAdmin: async (_adminId: any): Promise<number> => {
+        const list = await fetchMine();
+        return list.filter((n) => !n.isRead).length;
     },
 
     // Mark all as read for manager
-    markAllAsReadByManager: async (managerId: any): Promise<void> => {
-        return apiClient.patch('/v1/notifications', {});
+    markAllAsReadByManager: async (_managerId?: any): Promise<void> => {
+        await apiClient.patch('/v1/notifications/read-all', {});
     },
 
     // Mark all as read for admin
-    markAllAsReadByAdmin: async (adminId: any): Promise<void> => {
-        return apiClient.patch('/v1/notifications', {});
+    markAllAsReadByAdmin: async (_adminId?: any): Promise<void> => {
+        await apiClient.patch('/v1/notifications/read-all', {});
     },
 
     // Get notification count
     count: async (): Promise<number> => {
-        return apiClient.get<number>('/v1/notifications');
+        const list = await fetchMine();
+        return list.length;
     },
 
     // Create notification

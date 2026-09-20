@@ -5,9 +5,12 @@
 
 // ============ ENUMS ============
 
+/** @deprecated Préférer FLEET_ROLES / FleetRole (src/api/roles.ts). */
 export enum AdminRole {
-    SUPER_ADMIN = 'SUPER_ADMIN',
-    ORGANIZATION_MANAGER = 'ORGANIZATION_MANAGER',
+    SUPER_ADMIN = 'FLEET_SUPER_ADMIN',
+    ORGANIZATION_MANAGER = 'FLEET_MANAGER',
+    ADMIN = 'FLEET_ADMIN',
+    DRIVER = 'FLEET_DRIVER',
 }
 
 export enum Gender {
@@ -75,7 +78,12 @@ export interface LoginResponse {
     userUuid?: string;
     /** Ensemble des roles renvoyes par le backend. */
     roles?: string[];
+    profilePhotoUrl?: string | null;
+    phone?: string | null;
+    vehicleId?: string | null;
 }
+
+export type { BackendUserDetail, BackendAuthResponse } from './api';
 
 // ============ ADMIN TYPES ============
 

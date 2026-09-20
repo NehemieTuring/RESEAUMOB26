@@ -1,6 +1,6 @@
 /**
  * FleetMan Mobile - Organization Profile
- * Organization profile view
+ * Profil de l'organisation (admin = org) : nom, logo, contact, effectifs.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +13,6 @@ import {
     ActivityIndicator,
     Alert,
     Image,
-    DeviceEventEmitter,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,52 +21,36 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/context/ThemeContext';
 import { DashboardHeader, OrganizationFormModal } from '../src/components';
-import { authApi, accountApi, organizationApi } from '../src/services';
-import { getApiBaseUrl } from '../src/constants/Config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Admin } from '../src/types';
+import { orgResourcesApi, type OrganizationProfile } from '../src/services/orgResourcesApi';
+import type { FleetManager } from '../src/services/fleetManagerApi';
+import { resolvePublicMediaUrl } from '../src/constants/Config';
+import { useFleetRole } from '../src/hooks/useFleetRole';
 
 export default function OrganizationProfileScreen() {
     const router = useRouter();
     const { t } = useTranslation();
     const { colors } = useTheme();
+    const { ready, isPlatformAdmin, isDriver } = useFleetRole();
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<Admin | null>(null);
+    const [org, setOrg] = useState<OrganizationProfile | null>(null);
+    const [managers, setManagers] = useState<FleetManager[]>([]);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [orgLogo, setOrgLogo] = useState<string | null>(null);
 
-    const fetchProfile = async () => {
+    const applyLogo = (profile: OrganizationProfile) => {
+        const path = profile.logoUrl || profile.photoUrl;
+        const url = resolvePublicMediaUrl(path);
+        setOrgLogo(url);
+    };
+
+    const fetchProfile = async (silent = false) => {
         try {
-            setLoading(true);
-            const userStr = await AsyncStorage.getItem('user');
-            if (userStr) {
-                const sessionUser = JSON.parse(userStr);
-                const adminId = sessionUser.userUuid || sessionUser.adminId || sessionUser.userId;
-
-                if (adminId) {
-                    const profileData = await authApi.me();
-                    setUser({
-                        ...profileData,
-                        organizationName: profileData.companyName || "Mon Organisation",
-                        organizationId: profileData.id,
-                        adminRole: profileData.roles[0],
-                        personalCity: profileData.companyCity || '-',
-                        personalCountry: '-'
-                    } as any);
-
-                    if (profileData.companyLogoUrl) {
-                        const path = profileData.companyLogoUrl;
-                        if (path.startsWith('http')) {
-                            setOrgLogo(path);
-                        } else {
-                            const activeUrl = getApiBaseUrl();
-                            const baseUrl = activeUrl.replace('/api', '');
-                            const imageUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/api/v1/files/${path}`;
-                            setOrgLogo(imageUrl);
-                        }
-                    }
-                }
+            if (!silent) {
+                setLoading(true);
             }
+            const profile = await orgResourcesApi.getProfile();
+            setOrg(profile);
+            applyLogo(profile);
         } catch (error) {
             console.error('Error fetching org profile:', error);
             Alert.alert(t('common.error'), 'Impossible de charger les informations');
@@ -77,8 +60,14 @@ export default function OrganizationProfileScreen() {
     };
 
     useEffect(() => {
+        if (!ready) return;
+        if (isDriver) {
+            router.replace('/driver/home');
+            return;
+        }
         fetchProfile();
-    }, []);
+        orgResourcesApi.getManagers().then(setManagers).catch(() => setManagers([]));
+    }, [ready, isDriver]);
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -96,45 +85,32 @@ export default function OrganizationProfileScreen() {
 
         if (!result.canceled) {
             try {
-                const newUri = result.assets[0].uri;
-                const fileName = newUri.split('/').pop() || 'org_logo.jpg';
-                const mimeType = 'image/jpeg';
-                
-                const updatedOrg = await organizationApi.uploadCompanyLogo(newUri, mimeType, fileName);
-                
-                let imageUrl = updatedOrg.companyLogoUrl || newUri;
-                if (updatedOrg.companyLogoUrl && !updatedOrg.companyLogoUrl.startsWith('http')) {
-                    const activeUrl = getApiBaseUrl();
-                    const baseUrl = activeUrl.replace('/api', '');
-                    imageUrl = updatedOrg.companyLogoUrl.startsWith('/') ? `${baseUrl}${updatedOrg.companyLogoUrl}` : `${baseUrl}/api/v1/files/${updatedOrg.companyLogoUrl}`;
-                }
-                
-                setOrgLogo(imageUrl);
+                const asset = result.assets[0];
+                const newUri = asset.uri;
+                const rawName = asset.fileName || newUri.split('/').pop() || 'org_logo.jpg';
+                const fileName = rawName.includes('.') ? rawName.split('?')[0] : `${rawName.split('?')[0]}.jpg`;
+                const mimeType = asset.mimeType || 'image/jpeg';
 
-                const userStr = await AsyncStorage.getItem('user');
-                if (userStr) {
-                    const sessionUser = JSON.parse(userStr);
-                    sessionUser.companyLogoUrl = updatedOrg.companyLogoUrl;
-                    await AsyncStorage.setItem('user', JSON.stringify(sessionUser));
-                    DeviceEventEmitter.emit('userProfileUpdated');
-                }
-                
-                Alert.alert(t('common.success'), 'Logo de l\'organisation mis à jour');
+                const updated = await orgResourcesApi.uploadLogo(newUri, mimeType, fileName);
+                setOrg(updated);
+                const imageUrl = resolvePublicMediaUrl(updated.logoUrl) || newUri;
+                setOrgLogo(imageUrl.includes('?') ? imageUrl : `${imageUrl}?t=${Date.now()}`);
+                Alert.alert(t('common.success'), t('profile.logoUpdated'));
             } catch (error) {
                 console.error('Error uploading org logo:', error);
-                Alert.alert('Erreur', 'Impossible de mettre à jour le logo de l\'organisation');
+                Alert.alert(t('common.error'), t('profile.logoError'));
             }
         }
     };
 
-    const InfoRow = ({ label, value, icon }: { label: string; value: string | undefined; icon: string }) => (
-        <View style={[styles.infoRow, { borderBottomColor: colors.borderGlass }]}>
+    const InfoRow = ({ label, value, icon, last }: { label: string; value?: string | number | null; icon: string; last?: boolean }) => (
+        <View style={[styles.infoRow, { borderBottomColor: colors.borderGlass, borderBottomWidth: last ? 0 : 1 }]}>
             <View style={[styles.infoIconContainer, { backgroundColor: colors.primaryCyan + '15' }]}>
                 <Ionicons name={icon as any} size={18} color={colors.primaryCyan} />
             </View>
             <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
-                <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value || '-'}</Text>
+                <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{value ?? '-'}</Text>
             </View>
         </View>
     );
@@ -147,63 +123,113 @@ export default function OrganizationProfileScreen() {
         );
     }
 
+    const ownerName = [org?.firstName, org?.lastName].filter(Boolean).join(' ').trim();
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.primaryDark }]} edges={['top']}>
-            <DashboardHeader showSearch={false} />
+            <DashboardHeader showSearch={false} onRefresh={() => fetchProfile(true)} />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Profil de l'Organisation</Text>
-                <TouchableOpacity onPress={() => setIsEditModalVisible(true)}>
-                    <Ionicons name="pencil" size={24} color={colors.primaryCyan} />
-                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('profile.orgTitle')}</Text>
+                {isPlatformAdmin ? (
+                    <TouchableOpacity onPress={() => org && setIsEditModalVisible(true)}>
+                        <Ionicons name="pencil" size={24} color={colors.primaryCyan} />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.backButton} />
+                )}
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.logoSection}>
+                    {isPlatformAdmin ? (
                     <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
-                        <View style={{ width: 120, height: 120, position: 'relative' }}>
+                        <View style={styles.logoClip}>
                             {orgLogo ? (
-                                <Image source={{ uri: orgLogo }} style={[styles.logoPlaceholder, { borderWidth: 0 }]} onError={() => setOrgLogo('')} />
+                                <Image source={{ uri: orgLogo }} style={styles.logoImage} resizeMode="cover" />
                             ) : (
                                 <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
                                     <Ionicons name="business" size={60} color={colors.textMuted} />
                                 </View>
                             )}
-                            <View style={[styles.editBadge, { backgroundColor: colors.primaryCyan }]}>
-                                <Ionicons name="camera" size={16} color="#fff" />
-                            </View>
+                        </View>
+                        <View style={[styles.editBadge, { backgroundColor: colors.primaryCyan }]}>
+                            <Ionicons name="camera" size={16} color="#fff" />
                         </View>
                     </TouchableOpacity>
+                    ) : (
+                    <View style={styles.photoContainer}>
+                        <View style={styles.logoClip}>
+                            {orgLogo ? (
+                                <Image source={{ uri: orgLogo }} style={styles.logoImage} resizeMode="cover" />
+                            ) : (
+                                <View style={[styles.logoPlaceholder, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                                    <Ionicons name="business" size={60} color={colors.textMuted} />
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                    )}
                     <Text style={[styles.orgName, { color: colors.textPrimary }]}>
-                        {user?.organizationName}
+                        {org?.organizationName || t('form.organizationName')}
                     </Text>
                     <Text style={[styles.orgId, { color: colors.primaryCyan }]}>
-                        ID: {user?.organizationId}
+                        {t('profile.orgId')}: {org?.adminId || '-'}
                     </Text>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>DÉTAILS DE L'ORGANISATION</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('profile.orgDetails')}</Text>
                     <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
-                        <InfoRow label={t('form.organizationName')} value={user?.organizationName} icon="business" />
-                        <InfoRow label="Rôle de l'administrateur" value={user?.adminRole} icon="shield-checkmark" />
-                        <InfoRow label="Pays" value={user?.personalCountry || 'Cameroun'} icon="globe" />
-                        <InfoRow label="Ville" value={user?.personalCity || 'Douala'} icon="location" />
+                        <InfoRow label={t('form.organizationName')} value={org?.organizationName} icon="business" />
+                        <InfoRow label={t('profile.orgOwner')} value={ownerName || '-'} icon="person" />
+                        <InfoRow label={t('form.email')} value={org?.email} icon="mail" />
+                        <InfoRow label={t('form.phone')} value={org?.phone} icon="call" />
+                        <InfoRow label={t('profile.managers')} value={org?.managerCount} icon="people" />
+                        <InfoRow label={t('profile.fleets')} value={org?.fleetCount} icon="layers" />
+                        <InfoRow label={t('profile.vehicles')} value={org?.vehicleCount} icon="car" />
+                        <InfoRow last label={t('profile.drivers')} value={org?.driverCount} icon="speedometer" />
                     </View>
                 </View>
+
+                {managers.length > 0 ? (
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t('profile.managers')}</Text>
+                        <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderGlass }]}>
+                            {managers.map((m, index) => (
+                                <InfoRow
+                                    key={m.managerId || `${m.managerEmail}-${index}`}
+                                    label={[m.managerFirstName, m.managerLastName].filter(Boolean).join(' ') || m.managerEmail || '-'}
+                                    value={m.managerEmail || m.adminName || '-'}
+                                    icon="person"
+                                    last={index === managers.length - 1}
+                                />
+                            ))}
+                        </View>
+                    </View>
+                ) : null}
 
                 <View style={{ height: 40 }} />
             </ScrollView>
 
-            <OrganizationFormModal
-                visible={isEditModalVisible}
-                onClose={() => setIsEditModalVisible(false)}
-                onSuccess={fetchProfile}
-                initialData={user}
-            />
+            {isPlatformAdmin && org ? (
+                <OrganizationFormModal
+                    visible={isEditModalVisible}
+                    onClose={() => setIsEditModalVisible(false)}
+                    onSuccess={() => {
+                        setIsEditModalVisible(false);
+                        fetchProfile();
+                    }}
+                    initialData={{
+                        name: org.organizationName,
+                        logo: orgLogo,
+                        phone: org.phone || undefined,
+                    }}
+                />
+            ) : null}
         </SafeAreaView>
     );
 }
@@ -228,6 +254,8 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
+        flex: 1,
+        textAlign: 'center',
     },
     scrollContent: {
         padding: 20,
@@ -235,6 +263,22 @@ const styles = StyleSheet.create({
     logoSection: {
         alignItems: 'center',
         marginBottom: 32,
+    },
+    photoContainer: {
+        position: 'relative',
+        marginBottom: 16,
+        width: 120,
+        height: 120,
+    },
+    logoClip: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        overflow: 'hidden',
+    },
+    logoImage: {
+        width: 120,
+        height: 120,
     },
     logoPlaceholder: {
         width: 120,
@@ -244,10 +288,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    photoContainer: {
-        position: 'relative',
-        marginBottom: 16,
-    },
     editBadge: {
         position: 'absolute',
         bottom: 0,
@@ -255,8 +295,6 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        borderWidth: 3,
-        borderColor: '#00000000',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -264,11 +302,14 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: '700',
         marginBottom: 4,
+        textAlign: 'center',
     },
     orgId: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
+        textAlign: 'center',
+        paddingHorizontal: 16,
     },
     section: {
         marginBottom: 24,
@@ -289,7 +330,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderBottomWidth: 1,
     },
     infoIconContainer: {
         width: 40,

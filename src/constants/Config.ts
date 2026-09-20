@@ -5,24 +5,25 @@
 
 // List of possible backend IP addresses to try
 // Add your IPs here - the app will automatically use the first one that works
-// Pointe vers FleetMan-DES-Backend (port 8081)
-const POSSIBLE_API_HOSTS = [
-    'http://localhost:8081',        // Simulateur Web / iOS
-    'http://10.0.2.2:8081',        // Émulateur Android
-    'http://192.168.254.96:8081',  // Téléphone physique sur le même réseau Wi-Fi
+// Pointe vers FleetMan-DES-Backend (port 8085)
+const POSSIBLE_API_BASE_URLS = [
+    'http://localhost:8081/api',        // Simulateur Web / iOS (FORCED DEFAULT)
+    'https://fleetman.yowyob.com/fleet-api', // Serveur distant
+    'http://10.0.2.2:8081/api',        // Émulateur Android
+    'http://192.168.254.96:8081/api',  // Téléphone physique sur le même réseau Wi-Fi
 ];
 
 // Current active API URL (will be updated after detection)
-let activeApiBaseUrl = POSSIBLE_API_HOSTS[0] + '/api';
+let activeApiBaseUrl = POSSIBLE_API_BASE_URLS[0];
 
 // Function to test if an API endpoint is reachable
 const testApiConnection = async (baseUrl: string): Promise<boolean> => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
 
         // Utilise l'endpoint de santé du DES-Backend pour vérifier la connexion
-        const response = await fetch(`${baseUrl}/api/v1/health/public-stats`, {
+        const response = await fetch(`${baseUrl}/v1/health/public-stats`, {
             method: 'GET',
             signal: controller.signal,
         });
@@ -39,28 +40,48 @@ const testApiConnection = async (baseUrl: string): Promise<boolean> => {
 export const detectApiUrl = async (): Promise<string> => {
     console.log('[Config] Detecting working API URL...');
 
-    for (const host of POSSIBLE_API_HOSTS) {
-        console.log(`[Config] Testing ${host}...`);
-        const isReachable = await testApiConnection(host);
-
-        if (isReachable) {
-            const newUrl = `${host}/api`;
-            setApiBaseUrl(newUrl);
-            console.log(`[Config] ✅ API found at: ${activeApiBaseUrl}`);
-            return activeApiBaseUrl;
-        }
+    const results = await Promise.all(
+        POSSIBLE_API_BASE_URLS.map(async (url) => ({
+            url,
+            ok: await testApiConnection(url),
+        }))
+    );
+    const found = results.find((r) => r.ok);
+    if (found) {
+        setApiBaseUrl(found.url);
+        console.log(`[Config] ✅ API found at: ${activeApiBaseUrl}`);
+        return activeApiBaseUrl;
     }
 
-    // If no host works, use the first one as fallback
-    console.log('[Config] ⚠️ No working API found, using default');
-    const fallbackUrl = `${POSSIBLE_API_HOSTS[0]}/api`;
-    setApiBaseUrl(fallbackUrl);
+    console.log('[Config] ⚠️ No working API found, using default (mode hors-ligne)');
+    setApiBaseUrl(POSSIBLE_API_BASE_URLS[0]);
     return activeApiBaseUrl;
 };
 
 // Get the current API base URL
 export const getApiBaseUrl = (): string => {
     return activeApiBaseUrl;
+};
+
+/** Transforme un chemin local (`/api/v1/files/...`, `uploads/...`) en URL affichable. */
+export const resolvePublicMediaUrl = (path?: string | null): string | null => {
+    if (!path) {
+        return null;
+    }
+    if (
+        path.startsWith('http://') ||
+        path.startsWith('https://') ||
+        path.startsWith('blob:') ||
+        path.startsWith('file:') ||
+        path.startsWith('data:')
+    ) {
+        return path;
+    }
+    const origin = getApiBaseUrl().replace(/\/api\/?$/, '');
+    if (path.startsWith('/')) {
+        return `${origin}${path}`;
+    }
+    return `${origin}/api/v1/files/${path}`;
 };
 
 // Export for backward compatibility (using let to allow updates)
@@ -75,7 +96,7 @@ export const setApiBaseUrl = (url: string) => {
 export const Config = {
     // API Endpoints
     apiBaseUrl: activeApiBaseUrl,
-    possibleHosts: POSSIBLE_API_HOSTS,
+    possibleHosts: POSSIBLE_API_BASE_URLS,
 
     // Auth endpoints (dynamically generated)
     get authEndpoints() {

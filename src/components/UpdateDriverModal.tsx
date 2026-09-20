@@ -1,14 +1,15 @@
 /**
- * FleetMan Mobile - Update Driver Modal
+ * Édition d'un chauffeur — champs persistés (users + drivers).
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { CreateModal, FormField } from './CreateModal';
-import { FormInput } from './FormInput';
-import { driverApi, Driver } from '../services';
+import { CreateModal, FormField, FormRow } from './CreateModal';
+import { FormInput, FormSelect } from './FormInput';
+import { driverApi, type Driver, type Fleet } from '../services';
+import { fleetApi } from '../services/fleetApi';
 import { useTheme } from '../context/ThemeContext';
 
 interface UpdateDriverModalProps {
@@ -16,77 +17,89 @@ interface UpdateDriverModalProps {
     driver: Driver | null;
     onClose: () => void;
     onSuccess: () => void;
+    fleets?: Fleet[];
 }
+
+const STATUS_OPTIONS = [
+    { label: 'Actif', value: 'ACTIVE' },
+    { label: 'Inactif', value: 'INACTIVE' },
+];
 
 export const UpdateDriverModal: React.FC<UpdateDriverModalProps> = ({
     visible,
     driver,
     onClose,
     onSuccess,
+    fleets: fleetsProp,
 }) => {
     const { t } = useTranslation();
     const { colors } = useTheme();
     const [loading, setLoading] = useState(false);
-
+    const [fleets, setFleets] = useState<Fleet[]>(fleetsProp ?? []);
     const [formData, setFormData] = useState({
-        driverFirstName: '',
-        driverLastName: '',
-        driverEmail: '',
-        driverPhoneNumber: '',
-        driverLicenseNumber: '',
-        driverCardNumber: '',
-        driverEmergencyContactName: '',
-        driverEmergencyContactPhone: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        licenseNumber: '',
+        status: 'ACTIVE',
+        fleetId: '',
     });
-
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (fleetsProp && fleetsProp.length) {
+            setFleets(fleetsProp);
+            return;
+        }
+        if (visible) {
+            fleetApi.getAll().then(setFleets).catch(() => setFleets([]));
+        }
+    }, [visible, fleetsProp]);
 
     useEffect(() => {
         if (driver) {
             setFormData({
-                driverFirstName: driver.driverFirstName,
-                driverLastName: driver.driverLastName,
-                driverEmail: driver.driverEmail,
-                driverPhoneNumber: driver.driverPhoneNumber || '',
-                driverLicenseNumber: driver.driverLicenseNumber || '',
-                driverCardNumber: driver.driverCardNumber || '',
-                driverEmergencyContactName: driver.driverEmergencyContactName || '',
-                driverEmergencyContactPhone: driver.driverEmergencyContactPhone || '',
+                firstName: driver.driverFirstName || '',
+                lastName: driver.driverLastName || '',
+                email: driver.driverEmail || '',
+                phone: driver.driverPhoneNumber || '',
+                licenseNumber: driver.driverLicenseNumber || '',
+                status: driver.driverStatus === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+                fleetId: driver.fleetId || '',
             });
+            setErrors({});
         }
     }, [driver]);
 
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
-        if (!formData.driverFirstName.trim()) newErrors.driverFirstName = 'Le prénom est requis';
-        if (!formData.driverLastName.trim()) newErrors.driverLastName = 'Le nom est requis';
-        if (!formData.driverEmail.trim()) newErrors.driverEmail = 'L\'email est requis';
+        if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
+        if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
+        if (!formData.email.trim()) newErrors.email = 'L\'email est requis';
+        if (!formData.licenseNumber.trim()) newErrors.licenseNumber = 'Le permis est requis';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async () => {
         if (!validate() || !driver) return;
-
         setLoading(true);
         try {
             await driverApi.update(driver.driverId, {
-                driverFirstName: formData.driverFirstName,
-                driverLastName: formData.driverLastName,
-                driverEmail: formData.driverEmail,
-                driverPhoneNumber: formData.driverPhoneNumber || undefined,
-                driverLicenseNumber: formData.driverLicenseNumber || undefined,
-                driverCardNumber: formData.driverCardNumber || undefined,
-                driverEmergencyContactName: formData.driverEmergencyContactName || undefined,
-                driverEmergencyContactPhone: formData.driverEmergencyContactPhone || undefined,
+                driverFirstName: formData.firstName.trim(),
+                driverLastName: formData.lastName.trim(),
+                driverEmail: formData.email.trim(),
+                driverPhoneNumber: formData.phone.trim() || undefined,
+                driverLicenseNumber: formData.licenseNumber.trim(),
+                driverStatus: formData.status,
+                fleetId: formData.fleetId || undefined,
             });
-
-            Alert.alert(t('common.success'), 'Le chauffeur a été mis à jour avec succès.');
+            Alert.alert(t('common.success'), 'Chauffeur mis à jour');
             onSuccess();
             onClose();
         } catch (error: any) {
-            console.error('Error updating driver:', error);
-            Alert.alert(t('common.error'), error.message || 'Une erreur est survenue lors de la mise à jour.');
+            Alert.alert(t('common.error'), error.message || 'Mise à jour impossible');
         } finally {
             setLoading(false);
         }
@@ -96,103 +109,85 @@ export const UpdateDriverModal: React.FC<UpdateDriverModalProps> = ({
         <CreateModal
             visible={visible}
             onClose={onClose}
-            title="Modifier le Chauffeur"
+            title="Modifier le chauffeur"
             onSubmit={handleSubmit}
             loading={loading}
-            submitText="Enregistrer les modifications"
+            submitText="Enregistrer"
             cancelText="Annuler"
         >
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                <View style={[styles.infoBox, { backgroundColor: colors.surfaceGlass }]}>
-                    <Ionicons name="person-outline" size={20} color={colors.primaryBlue} />
-                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                        Mettez à jour les informations de {driver?.driverFirstName} {driver?.driverLastName}.
-                    </Text>
-                </View>
+            <View style={[styles.infoBox, { backgroundColor: colors.surfaceGlass }]}>
+                <Ionicons name="person-outline" size={20} color={colors.primaryBlue} />
+                <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                    {driver?.driverFirstName} {driver?.driverLastName}
+                    {driver?.username ? ` · @${driver.username}` : ''}
+                </Text>
+            </View>
 
-                <View style={styles.formRow}>
-                    <View style={{ flex: 1 }}>
-                        <FormField label="Prénom *" required>
-                            <FormInput
-                                placeholder="Prénom"
-                                value={formData.driverFirstName}
-                                onChangeText={(text) => setFormData({ ...formData, driverFirstName: text })}
-                                error={errors.driverFirstName}
-                            />
-                        </FormField>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <FormField label="Nom *" required>
-                            <FormInput
-                                placeholder="Nom"
-                                value={formData.driverLastName}
-                                onChangeText={(text) => setFormData({ ...formData, driverLastName: text })}
-                                error={errors.driverLastName}
-                            />
-                        </FormField>
-                    </View>
-                </View>
-
-                <FormField label="Email *" required>
+            <FormRow>
+                <FormField label="Prénom" required halfWidth>
                     <FormInput
-                        placeholder="email@exemple.com"
-                        value={formData.driverEmail}
-                        onChangeText={(text) => setFormData({ ...formData, driverEmail: text })}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        error={errors.driverEmail}
+                        value={formData.firstName}
+                        onChangeText={(text) => setFormData({ ...formData, firstName: text })}
+                        error={errors.firstName}
                     />
                 </FormField>
-
-                <FormField label="Téléphone">
+                <FormField label="Nom" required halfWidth>
                     <FormInput
-                        placeholder="+237 ..."
-                        value={formData.driverPhoneNumber}
-                        onChangeText={(text) => setFormData({ ...formData, driverPhoneNumber: text.replace(/[^0-9+]/g, '') })}
+                        value={formData.lastName}
+                        onChangeText={(text) => setFormData({ ...formData, lastName: text })}
+                        error={errors.lastName}
+                    />
+                </FormField>
+            </FormRow>
+
+            <FormField label="Email" required>
+                <FormInput
+                    value={formData.email}
+                    onChangeText={(text) => setFormData({ ...formData, email: text })}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    error={errors.email}
+                />
+            </FormField>
+
+            <FormRow>
+                <FormField label="Téléphone" halfWidth>
+                    <FormInput
+                        value={formData.phone}
+                        onChangeText={(text) => setFormData({ ...formData, phone: text.replace(/[^0-9+]/g, '') })}
                         keyboardType="phone-pad"
                     />
                 </FormField>
-
-                <View style={styles.formRow}>
-                    <View style={{ flex: 1 }}>
-                        <FormField label="N° de permis">
-                            <FormInput
-                                placeholder="Permis"
-                                value={formData.driverLicenseNumber}
-                                onChangeText={(text) => setFormData({ ...formData, driverLicenseNumber: text })}
-                            />
-                        </FormField>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <FormField label="N° de carte">
-                            <FormInput
-                                placeholder="Carte"
-                                value={formData.driverCardNumber}
-                                onChangeText={(text) => setFormData({ ...formData, driverCardNumber: text })}
-                            />
-                        </FormField>
-                    </View>
-                </View>
-
-                <Text style={styles.sectionTitle}>Contact d'urgence</Text>
-
-                <FormField label="Nom du contact">
+                <FormField label="N° de permis" required halfWidth>
                     <FormInput
-                        placeholder="Nom complet"
-                        value={formData.driverEmergencyContactName}
-                        onChangeText={(text) => setFormData({ ...formData, driverEmergencyContactName: text })}
+                        value={formData.licenseNumber}
+                        onChangeText={(text) => setFormData({ ...formData, licenseNumber: text })}
+                        error={errors.licenseNumber}
                     />
                 </FormField>
+            </FormRow>
 
-                <FormField label="Téléphone du contact">
-                    <FormInput
-                        placeholder="+237 ..."
-                        value={formData.driverEmergencyContactPhone}
-                        onChangeText={(text) => setFormData({ ...formData, driverEmergencyContactPhone: text.replace(/[^0-9+]/g, '') })}
-                        keyboardType="phone-pad"
-                    />
-                </FormField>
-            </ScrollView>
+            <FormField label="Flotte" zIndex={500}>
+                <FormSelect
+                    value={formData.fleetId}
+                    options={[
+                        { label: 'Aucune flotte', value: '' },
+                        ...fleets.map((f) => ({ label: f.fleetName, value: f.fleetId.toString() })),
+                    ]}
+                    onSelect={(value) => setFormData({ ...formData, fleetId: value })}
+                    zIndex={500}
+                />
+            </FormField>
+
+            <FormField label="Statut" zIndex={400}>
+                <FormSelect
+                    value={formData.status}
+                    options={STATUS_OPTIONS}
+                    onSelect={(value) => setFormData({ ...formData, status: value })}
+                    zIndex={400}
+                    openDirection="up"
+                />
+            </FormField>
         </CreateModal>
     );
 };
@@ -209,18 +204,6 @@ const styles = StyleSheet.create({
     infoText: {
         flex: 1,
         fontSize: 14,
-    },
-    formRow: {
-        flexDirection: 'row',
-        gap: 12,
-        width: '100%',
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        marginTop: 20,
-        marginBottom: 10,
-        color: '#1e293b',
     },
 });
 

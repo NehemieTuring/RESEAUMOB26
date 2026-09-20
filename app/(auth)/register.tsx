@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { PageHeader } from '../../src/components';
 import * as DocumentPicker from 'expo-document-picker';
-import { authApi } from '../../src/services';
+import { authApi } from '../../src/api';
 import apiClient from '../../src/services/api';
 
 export default function RegisterScreen() {

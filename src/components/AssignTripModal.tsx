@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, Act
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
-import { tripApi } from '../services/tripApi';
-import { driverApi, Driver } from '../services/driverApi';
+import { TripService as tripApi } from '../api/tripService';
+import { DriverService as driverApi, type Driver } from '../api/driverService';
+import { fleetApi } from '../services/fleetApi';
+import { orgResourcesApi } from '../services/orgResourcesApi';
+import { isAdminSession } from '../api/session';
 
 interface AssignTripModalProps {
     visible: boolean;
@@ -38,7 +41,16 @@ export const AssignTripModal: React.FC<AssignTripModalProps> = ({ visible, tripI
     const loadDrivers = async () => {
         setIsLoading(true);
         try {
-            const dList = await driverApi.getAll();
+            let dList: Driver[] = [];
+            if (await isAdminSession()) {
+                dList = await orgResourcesApi.getDrivers();
+            } else {
+                const fleets = await fleetApi.getAll();
+                const nested = await Promise.all(
+                    fleets.map((fleet) => driverApi.getAll(fleet.fleetId).catch(() => [] as Driver[]))
+                );
+                dList = nested.flat();
+            }
             setDrivers(dList);
         } catch (err) {
             console.error('Error loading drivers:', err);

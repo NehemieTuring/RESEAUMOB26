@@ -18,23 +18,22 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { CreateModal, FormField } from './CreateModal';
 import { FormInput } from './FormInput';
-import { organizationApi } from '../services/authApi';
-import apiClient from '../services/api';
+import { orgResourcesApi } from '../services/orgResourcesApi';
 import { useTheme } from '../context/ThemeContext';
 
 interface OrganizationFormModalProps {
     visible: boolean;
-    orgId: number;
-    initialData: {
-        name: string;
-        logo: string | null;
+    orgId?: number;
+    initialData?: {
+        name?: string | null;
+        logo?: string | null;
         phone?: string;
         address?: string;
         city?: string;
         country?: string;
-    };
+    } | null;
     onClose: () => void;
-    onSuccess: (updatedOrg: any) => void;
+    onSuccess: (updatedOrg?: any) => void;
 }
 
 export const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
@@ -47,19 +46,19 @@ export const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
     const { t } = useTranslation();
     const { colors } = useTheme();
     const [loading, setLoading] = useState(false);
-    const [orgName, setOrgName] = useState(initialData.name);
-    const [orgPhone, setOrgPhone] = useState(initialData.phone || '');
-    const [orgAddress, setOrgAddress] = useState(initialData.address || '');
-    const [orgCity, setOrgCity] = useState(initialData.city || '');
+    const [orgName, setOrgName] = useState(initialData?.name || '');
+    const [orgPhone, setOrgPhone] = useState(initialData?.phone || '');
+    const [orgAddress, setOrgAddress] = useState(initialData?.address || '');
+    const [orgCity, setOrgCity] = useState(initialData?.city || '');
     const [selectedLogoUri, setSelectedLogoUri] = useState<string | null>(null);
-    const [currentLogo, setCurrentLogo] = useState<string | null>(initialData.logo);
+    const [currentLogo, setCurrentLogo] = useState<string | null>(initialData?.logo || null);
 
     useEffect(() => {
-        setOrgName(initialData.name);
-        setOrgPhone(initialData.phone || '');
-        setOrgAddress(initialData.address || '');
-        setOrgCity(initialData.city || '');
-        setCurrentLogo(initialData.logo);
+        setOrgName(initialData?.name || '');
+        setOrgPhone(initialData?.phone || '');
+        setOrgAddress(initialData?.address || '');
+        setOrgCity(initialData?.city || '');
+        setCurrentLogo(initialData?.logo || null);
         setSelectedLogoUri(null);
     }, [initialData, visible]);
 
@@ -94,21 +93,13 @@ export const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
             // PUT /v1/fleet-managers/me/company.
             let logoUrl: string | undefined;
             if (selectedLogoUri) {
-                const up = await apiClient.uploadFile<{ fileUrl: string }>(
-                    '/v1/files/upload?category=logo',
-                    selectedLogoUri,
-                    'image/jpeg',
-                    'logo.jpg'
-                );
-                logoUrl = up?.fileUrl;
+                const up = await orgResourcesApi.uploadLogo(selectedLogoUri, 'image/jpeg', 'logo.jpg');
+                logoUrl = up?.logoUrl || undefined;
             }
 
-            const updatedOrg = await organizationApi.updateCompany({
-                companyName: orgName,
-                companyPhone: orgPhone,
-                companyAddress: orgAddress,
-                companyCity: orgCity,
-                companyLogoUrl: logoUrl,
+            const updatedOrg = await orgResourcesApi.updateProfile({
+                organizationName: orgName,
+                logoUrl,
             });
 
             onSuccess(updatedOrg);
